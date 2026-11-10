@@ -1,0 +1,49 @@
+{
+  "board_id": "sample",
+  "instances": [],
+  "instance_id_mask_file": "sample_instance_ids.png",
+  "class_mask_file": "sample_black_masks.png",
+  "per_class_counts": {
+    "R": 0,
+    "C": 0,
+    "U": 0,
+    "Q": 0,
+    "J": 0,
+    "L": 0,
+    "RA": 0,
+    "D": 0,
+    "RN": 0,
+    "TP": 0,
+    "IC": 0,
+    "P": 0,
+    "CR": 0,
+    "M": 0,
+    "BTN": 0,
+    "FB": 0,
+    "CRA": 0,
+    "SW": 0,
+    "T": 0,
+    "F": 0,
+    "V": 0,
+    "LED": 0,
+    "S": 0,
+    "QA": 0,
+    "JP": 0
+  },
+  "threshold": 0.25,
+  "class_thresholds_used": true,
+  "table_background_suppressed": true,
+  "mask_nms_intersection_over_min_area": 0.55,
+  "checkpoint_epoch": 1,
+  "target_labels_used": false,
+  "gradcam": [
+    {
+      "image": "sample_gradcam_01.png",
+      "target": "query class logit + mean predicted-mask probability",
+      "class": "R",
+      "query_index": 0,
+      "hook": "ResNet-18 layer4 output",
+      "selected_rank": 1
+    }
+  ]
+}

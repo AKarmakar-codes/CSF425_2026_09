@@ -1,0 +1,58 @@
+architecture: YOLOv8m-seg
+backbone: Official YOLOv8 CSP-style Conv/C2f/SPPF backbone
+ultralytics: '8.3.161'
+torch: Keep Kaggle's preinstalled matched CUDA torch/torchvision pair
+num_classes: 25
+seed: 42
+epochs_per_trial: 60
+batch_size: 2
+gradient_accumulation: 4
+workers: 2
+persistent_workers: true
+prefetch_factor: 2
+exact_mask_disk_cache: true
+single_scan_instance_boxes: true
+cuda_fused_adamw: true
+cuda_cudnn_benchmark: true
+cuda_tf32_where_supported: true
+persistent_backups:
+  notebook_requires_configuration: true
+  providers: [private_kaggle_dataset, explicit_private_s3]
+  interval_seconds: 3600
+  retry_seconds: 60
+  shutdown_buffer_seconds: 900
+  recovery: last_completed_epoch_only
+  verify_full_remote_readback: true
+  keep_previous_known_good: true
+  live_remote_verification_by_author: false
+optimizer: AdamW
+learning_rate: 0.0002
+weight_decay: 0.05
+weight_decay_exclusions: Bias and normalization affine (1D parameters)
+tile_size: 1024
+tile_overlap: 256
+validation_fraction_by_board_group: 0.20
+validation_preserve_train_class_support: true
+extra_pcb_images: 0
+mask_loss_graph_f_only: true
+augmentations:
+  rotation_degrees: [-15, 15]
+  scale: [0.75, 1.25]
+  translation_fraction: 0.1
+  horizontal_flip_probability: 0.5
+  vertical_flip_probability: 0.5
+  hue_delta: [-3, 3]
+  saturation_gain: [0.8, 1.2]
+  value_gain: [0.8, 1.2]
+  mosaic: false
+  mixup: false
+trials:
+  - name: yolov8m_640_aug
+    input_size: 640
+    frozen_modules: 0
+  - name: yolov8m_960_aug
+    input_size: 960
+    frozen_modules: 0
+  - name: yolov8m_960_aug_frozen_backbone
+    input_size: 960
+    frozen_modules: 10

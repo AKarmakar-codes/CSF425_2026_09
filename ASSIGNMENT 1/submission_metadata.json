@@ -1,0 +1,26 @@
+{
+  "course": "CS F425 - Deep Learning",
+  "assignment": "Assignment-I",
+  "group_id": "G09",
+  "members": [
+    {
+      "name": "Yashvardhan Singh",
+      "student_id": "2024A7PS0116H"
+    },
+    {
+      "name": "Agnibh Karmakar",
+      "student_id": "2024B4A70837H"
+    }
+  ],
+  "repository_name": "CSF425_2026_G09",
+  "final_private_repository_url": null,
+  "source_repository_url": "https://github.com/AKarmakar-codes/DeepLearning",
+  "source_repository_commit": "bf79077695478c216491d259705a0942198b2b88",
+  "archive_name": "CSF425_2026_G09_Assignment-I.zip",
+  "email_subject": "[CSF425_2026_G09_Assignment-I]",
+  "prepared_date_local": "2026-10-18",
+  "timezone": "Asia/Calcutta",
+  "checkpoint_update_archive": "checkpoints-20261018T165317Z-1-001.zip",
+  "checkpoint_update_date_local": "2026-10-18",
+  "mandatory_checkpoint_files_present": true
+}

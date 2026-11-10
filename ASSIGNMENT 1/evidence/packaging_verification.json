@@ -1,0 +1,75 @@
+{
+  "date_local": "2026-10-18",
+  "runtime": {
+    "python": "3.12.5",
+    "torch": "2.6.0+cpu",
+    "device": "CPU"
+  },
+  "medium_checkpoints": {
+    "best_segment.ckpt": {
+      "strict_state_load": true,
+      "forward_128": true,
+      "frozen_threshold": 0.39
+    },
+    "yolov8m_960_aug.ckpt": {
+      "strict_state_load": true,
+      "forward_128": true,
+      "frozen_threshold": 0.48
+    }
+  },
+  "segmentation_shell_real_image_check": {
+    "exit_code": 0,
+    "input": "fixed 512x512 center crop from first official Graph-F test image; no quantitative score computed",
+    "predictions_saved": 5,
+    "png_written": true
+  },
+  "classification_shell_help_check": {
+    "exit_code": 0,
+    "real_checkpoint_inference": "now verified on 374 components using supplied ConvNeXt"
+  },
+  "existing_classification_regression_tests": {
+    "tests": 12,
+    "passed": 12,
+    "failed": 0,
+    "scope": "synthetic software correctness only; no synthetic checkpoint included"
+  },
+  "plot_review": [
+    "trial comparison",
+    "test classwise AP/F1",
+    "Graph-W saved-mask overlay"
+  ],
+  "full_test_rerun": false,
+  "clean_environment_install": false,
+  "rtmdet_source_archive_hash_match": true,
+  "rtmdet_internal_archive_crc_ok": true,
+  "rtmdet_deserialization_or_model_forward": "not run successfully in primary runtime: requires separate MMEngine/MMDetection environment",
+  "classification_shell_real_image_check": {
+    "exit_code": 0,
+    "input_board": "Graph-W/Arty_Bottom (first official test board)",
+    "annotated_component_boxes": 374,
+    "predicted_components": 374,
+    "frozen_threshold": 0.5700000000000001,
+    "probabilities_per_component": 25,
+    "png_and_json_saved": true,
+    "quantitative_test_score_computed": false,
+    "metadata_schema": "classification-checkpoint-legacy-export-v1",
+    "checkpoint_sha256": "5707da8f4785e06943e80514524942f645130df60db8d7efb62cdaba2881bcbf"
+  },
+  "classification_checkpoint_update": {
+    "original_archive": "checkpoints-20261018T165317Z-1-001.zip",
+    "models_strictly_loaded": 4,
+    "all_model_tensors_preserved": true,
+    "all_forward_outputs_finite_25_classes": true,
+    "original_best_matches_original_convnext": true,
+    "optimizer_state_omitted_from_exports": true,
+    "validation_f1_matches_historical_report": {
+      "trial_1_efficientnet_b0": true,
+      "trial_2_mobilenet_v3_large": true,
+      "trial_3_convnext_tiny": false,
+      "trial_4_efficientnet_b2": true
+    },
+    "convnext_report_discrepancy_disclosed": true,
+    "supporting_yolos_direct_forward_verified": true,
+    "native_yolos_pipeline_full_test_rerun": false
+  }
+}

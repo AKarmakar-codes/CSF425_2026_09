@@ -1,0 +1,124 @@
+# ==============================================================================
+# CS F425 - Deep Learning (Group G09)
+# Master .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Security & Credentials (Mandatory per Section 1.1)
+# Never commit HPC private keys or credentials to Git
+# ------------------------------------------------------------------------------
+csisdl_*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+.env
+.env.*
+*.secret
+
+# ------------------------------------------------------------------------------
+# 2. Python Bytecode, Caches & Environments
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Testing & Linting
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ------------------------------------------------------------------------------
+# 3. Large Datasets & Archives (Do not commit multi-GB archives)
+# ------------------------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Raw dataset directories and symlinks
+**/data/GraphPCB/
+**/data/GraphPCB
+**/data/coco_pcb_640/
+**/data/crops/
+**/data/prepared*/
+**/data/distilled_source/
+**/pcb_dslr_download/
+**/part_*/
+**/cvl_pcb_dslr_*/
+
+# ------------------------------------------------------------------------------
+# 4. Training Runs, Logs & Temporary Files
+# ------------------------------------------------------------------------------
+runs/
+**/runs/
+wandb/
+*.log
+*.tmp
+*.swp
+*~
+tmp/
+/tmp/
+
+# ------------------------------------------------------------------------------
+# 5. OS & Editor Specific
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# 6. Checkpoint Rules
+# Ignore ad-hoc / intermediate trial weights, but keep official required checkpoints
+# ------------------------------------------------------------------------------
+*.pth
+*.pt
+**/checkpoints/*.tmp
+**/checkpoints/trial_*.ckpt
+
+# Explicitly ensure required assignment checkpoints and keepfiles are preserved
+!**/checkpoints/.gitkeep
+!**/checkpoints/best_semantic.ckpt
+!**/checkpoints/best_instance.ckpt
+!**/checkpoints/best_segment.ckpt
+!**/checkpoints/best_classification.ckpt

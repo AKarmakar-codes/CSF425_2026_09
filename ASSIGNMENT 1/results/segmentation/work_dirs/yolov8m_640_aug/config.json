@@ -1,0 +1,46 @@
+{
+  "architecture": "yolov8m-seg",
+  "trial": "yolov8m_640_aug",
+  "epochs": 60,
+  "batch": 2,
+  "accumulation": 4,
+  "seed": 42,
+  "split_fingerprint": "21193f2a9969f0e7f86a048e2beb6a3ee307d542d135085e0014475085f37217",
+  "lr": 0.0002,
+  "weight_decay": 0.05,
+  "weight_decay_exclusions": "bias and normalization affine (1D parameters)",
+  "freeze": 0,
+  "settings": {
+    "tile": 1024,
+    "overlap": 256,
+    "mask_nms_iou": 0.5,
+    "max_detections": 5000,
+    "score_floor": 0.001,
+    "max_per_tile": 300,
+    "mask_binary_threshold": 0.5,
+    "input_size": 640
+  },
+  "augmentation": {
+    "degrees": 15,
+    "scale": [
+      0.75,
+      1.25
+    ],
+    "translate": 0.1,
+    "fliplr": 0.5,
+    "flipud": 0.5,
+    "hue_delta": 3,
+    "saturation_gain": [
+      0.8,
+      1.2
+    ],
+    "value_gain": [
+      0.8,
+      1.2
+    ],
+    "mosaic": 0,
+    "mixup": 0
+  },
+  "class_balance": "Ceil(max(1,sqrt(0.01 / per-tile class presence frequency)))",
+  "pretrained_weights": "yolov8m-seg.pt"
+}

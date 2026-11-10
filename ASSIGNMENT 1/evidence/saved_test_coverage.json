@@ -1,0 +1,16 @@
+{
+  "yolov8m_640_aug": {
+    "official_test_boards": 57,
+    "prediction_image_ids": 57,
+    "exact_official_test_membership": true,
+    "prediction_count": 29946,
+    "predictions_sha256": "988051e6605e314feadee7879f00b4885991772174271f47c16892efa71fc94c"
+  },
+  "yolov8m_960_aug": {
+    "official_test_boards": 57,
+    "prediction_image_ids": 57,
+    "exact_official_test_membership": true,
+    "prediction_count": 23574,
+    "predictions_sha256": "ec4d57fb46cc3693aa22f914848c00bd4cf6c11e45fe16bbe184d37637a64398"
+  }
+}

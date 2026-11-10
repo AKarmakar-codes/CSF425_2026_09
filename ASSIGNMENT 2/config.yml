@@ -1,0 +1,49 @@
+project:
+  name: CSF425_2026_G09_Assignment-II
+  group_id: G09
+  seed: 42
+
+taxonomy:
+  classes: [R, C, U, Q, J, L, RA, D, RN, TP, IC, P, CR, M, BTN, FB, CRA, SW, T, F, V, LED, S, QA, JP]
+  background_id: 0
+  ignore_id: 255
+
+model:
+  architecture: compact_masked_query_transformer_v2
+  backbone: resnet18
+  decoder_layers: 6
+  num_queries: 100
+  hidden_dim: 256
+  memory_size: 32
+  parameter_ceiling: 23600000
+  parameter_sweet_spot: 19504000
+  expected_inference_params: 18498398
+  efficiency_multiplier_target: 1.1000
+
+data:
+  source_only: true
+  external_image_ratio_max: 1.5
+  source_domains: [Graph-F, Graph-W]
+  total_official_source_boards: 152
+  tile_size: 1024
+  tile_overlap: 256
+
+training:
+  epochs: 60
+  batch_size: 2
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  grad_clip_norm: 1.0
+  boundary_loss_weight: 1.0
+  validation_threshold_selection: source_validation_only
+  calibrate_per_class_thresholds: true
+
+inference:
+  tile_size: 1024
+  tile_stride: 768
+  blending_window: hann_2d
+  suppress_table_background: true
+  score_threshold: checkpoint_source_validation
+  mask_threshold: 0.5
+  mask_nms_iou: 0.55
+  pseudo_reference_training: false

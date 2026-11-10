@@ -1,0 +1,36 @@
+{
+  "task": "semantic",
+  "tested_boards": [
+    {
+      "board_id": "sample",
+      "image_dimensions": [
+        560,
+        701
+      ]
+    }
+  ],
+  "model_sha256": "a3851b13f4ec655c554fcc9520478e1f98c4ffe40b89dd154127ea0fdd2840bc",
+  "params_inference": 18498398,
+  "threshold": 0.25,
+  "command": [
+    "/home/agnibh/Desktop/vscode/ML/CSF425_2026_G09/ASSIGNMENT 2/inference_semantic.py",
+    "--checkpoint",
+    "/home/agnibh/Desktop/vscode/ML/CSF425_2026_G09/ASSIGNMENT 2/checkpoints/best_semantic.ckpt",
+    "--images",
+    "ASSIGNMENT 2/data/sample.png",
+    "--out",
+    "ASSIGNMENT 2/results/semantic",
+    "--device",
+    "cpu",
+    "--gradcam"
+  ],
+  "device": "cpu",
+  "python": "3.11.15",
+  "torch": "2.11.0+cpu",
+  "torchvision": "0.26.0+cpu",
+  "numpy": "2.4.3",
+  "pillow": "12.1.1",
+  "started_unix": 1794260701.7633784,
+  "finished_unix": 1794260710.4751682,
+  "target_labels_used": false
+}

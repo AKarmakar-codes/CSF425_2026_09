@@ -1,0 +1,86 @@
+{
+  "criterion": "validation S_seg = 0.20 AP50 + 0.50 mAP50:95 + 0.30 mask F1; test scores not used",
+  "reported_top_three_provisional": [
+    "yolov8m_640_aug",
+    "yolov8m_960_aug",
+    "tiny_640"
+  ],
+  "checkpoint_backed_trials_in_primary_stats": [
+    "yolov8m_640_aug",
+    "yolov8m_960_aug",
+    "tiny_640"
+  ],
+  "best_trial": "yolov8m_640_aug",
+  "best_checkpoint": "checkpoints/best_segment.ckpt",
+  "best_checkpoint_sha256": "91e12f097f3cc5e0482afa8d8595d4eef121f79c5949c59663de7b4de759bcc9",
+  "test_used_for_selection": false,
+  "cross_protocol_ranking_verified": false,
+  "status": "medium-640 remains validation winner; supplied YOLO-s is 25 epochs and cannot support the older 70-epoch local score; primary three unchanged",
+  "all_reported_candidates_recomputed": [
+    {
+      "trial": "yolov8m_640_aug",
+      "source": "checkpoint-backed",
+      "validation_S_seg": 0.4201168080305042,
+      "checkpoint_available": true
+    },
+    {
+      "trial": "yolov8m_960_aug",
+      "source": "checkpoint-backed",
+      "validation_S_seg": 0.3912823289919791,
+      "checkpoint_available": true
+    },
+    {
+      "trial": "trial_1_yolov8s_seg",
+      "source": "historical_local",
+      "validation_S_seg": 0.3554550109543649,
+      "reported_S_seg": 0.3554550109543649,
+      "checkpoint_available": true,
+      "checkpoint_matches_report": false
+    },
+    {
+      "trial": "tiny_640",
+      "source": "checkpoint-backed",
+      "validation_S_seg": 0.354716204446186,
+      "checkpoint_available": true
+    },
+    {
+      "trial": "trial_2_yolov8n_seg",
+      "source": "historical_local",
+      "validation_S_seg": 0.32689383951004924,
+      "reported_S_seg": 0.32689383951004924,
+      "checkpoint_available": false
+    },
+    {
+      "trial": "trial_2_yolov8n_seg",
+      "source": "historical_source_repository",
+      "validation_S_seg": 0.32689383951004924,
+      "reported_S_seg": 0.32689383951004924,
+      "checkpoint_available": false
+    },
+    {
+      "trial": "trial_1_yolov8s_seg",
+      "source": "historical_source_repository",
+      "validation_S_seg": 0.286542965692884,
+      "reported_S_seg": 0.286542965692884,
+      "checkpoint_available": true,
+      "checkpoint_matches_report": "25-epoch source-repository configuration only; quantitative metrics not rerun"
+    },
+    {
+      "trial": "trial_3_maskrcnn_resnet50",
+      "source": "historical_local",
+      "validation_S_seg": 0.2776,
+      "reported_S_seg": 0.0754,
+      "checkpoint_available": false
+    },
+    {
+      "trial": "trial_3_maskrcnn_resnet50",
+      "source": "historical_source_repository",
+      "validation_S_seg": 0.2776,
+      "reported_S_seg": 0.0754,
+      "checkpoint_available": false
+    }
+  ],
+  "frozen_backbone_excluded": "Incomplete run; saved checkpoint threshold 0.0 but fast_test used 0.25; no validation-matched statistics supplied",
+  "cohort_median_parameters": null,
+  "excluded_historical_s70": "Supplied YOLO-s checkpoint has 25 training epochs; the old 70-epoch report is not evidence for these weights"
+}

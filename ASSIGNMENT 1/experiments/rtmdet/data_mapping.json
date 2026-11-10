@@ -1,0 +1,296 @@
+{
+  "canonical_classes": [
+    {
+      "id": 1,
+      "code": "R",
+      "source_rgb": [
+        255,
+        0,
+        0
+      ],
+      "display_hex": "#E53935"
+    },
+    {
+      "id": 2,
+      "code": "C",
+      "source_rgb": [
+        255,
+        255,
+        0
+      ],
+      "display_hex": "#1E88E5"
+    },
+    {
+      "id": 3,
+      "code": "U",
+      "source_rgb": [
+        0,
+        234,
+        255
+      ],
+      "display_hex": "#00ACC1"
+    },
+    {
+      "id": 4,
+      "code": "Q",
+      "source_rgb": [
+        170,
+        0,
+        255
+      ],
+      "display_hex": "#8E24AA"
+    },
+    {
+      "id": 5,
+      "code": "J",
+      "source_rgb": [
+        255,
+        127,
+        0
+      ],
+      "display_hex": "#FB8C00"
+    },
+    {
+      "id": 6,
+      "code": "L",
+      "source_rgb": [
+        191,
+        255,
+        0
+      ],
+      "display_hex": "#43A047"
+    },
+    {
+      "id": 7,
+      "code": "RA",
+      "source_rgb": [
+        0,
+        149,
+        255
+      ],
+      "display_hex": "#6D4C41"
+    },
+    {
+      "id": 8,
+      "code": "D",
+      "source_rgb": [
+        106,
+        255,
+        0
+      ],
+      "display_hex": "#D81B60"
+    },
+    {
+      "id": 9,
+      "code": "RN",
+      "source_rgb": [
+        0,
+        64,
+        255
+      ],
+      "display_hex": "#3949AB"
+    },
+    {
+      "id": 10,
+      "code": "TP",
+      "source_rgb": [
+        237,
+        185,
+        185
+      ],
+      "display_hex": "#C0CA33"
+    },
+    {
+      "id": 11,
+      "code": "IC",
+      "source_rgb": [
+        185,
+        215,
+        237
+      ],
+      "display_hex": "#00897B"
+    },
+    {
+      "id": 12,
+      "code": "P",
+      "source_rgb": [
+        231,
+        233,
+        185
+      ],
+      "display_hex": "#FFB300"
+    },
+    {
+      "id": 13,
+      "code": "CR",
+      "source_rgb": [
+        220,
+        185,
+        237
+      ],
+      "display_hex": "#5E35B1"
+    },
+    {
+      "id": 14,
+      "code": "M",
+      "source_rgb": [
+        185,
+        237,
+        224
+      ],
+      "display_hex": "#039BE5"
+    },
+    {
+      "id": 15,
+      "code": "BTN",
+      "source_rgb": [
+        143,
+        35,
+        35
+      ],
+      "display_hex": "#757575"
+    },
+    {
+      "id": 16,
+      "code": "FB",
+      "source_rgb": [
+        35,
+        98,
+        143
+      ],
+      "display_hex": "#FDD835"
+    },
+    {
+      "id": 17,
+      "code": "CRA",
+      "source_rgb": [
+        143,
+        106,
+        35
+      ],
+      "display_hex": "#212121"
+    },
+    {
+      "id": 18,
+      "code": "SW",
+      "source_rgb": [
+        107,
+        35,
+        143
+      ],
+      "display_hex": "#7E57C2"
+    },
+    {
+      "id": 19,
+      "code": "T",
+      "source_rgb": [
+        79,
+        143,
+        35
+      ],
+      "display_hex": "#F4511E"
+    },
+    {
+      "id": 20,
+      "code": "F",
+      "source_rgb": [
+        115,
+        115,
+        115
+      ],
+      "display_hex": "#2E7D32"
+    },
+    {
+      "id": 21,
+      "code": "V",
+      "source_rgb": [
+        204,
+        204,
+        204
+      ],
+      "display_hex": "#283593"
+    },
+    {
+      "id": 22,
+      "code": "LED",
+      "source_rgb": [
+        245,
+        130,
+        48
+      ],
+      "display_hex": "#7CB342"
+    },
+    {
+      "id": 23,
+      "code": "S",
+      "source_rgb": [
+        220,
+        190,
+        255
+      ],
+      "display_hex": "#546E7A"
+    },
+    {
+      "id": 24,
+      "code": "QA",
+      "source_rgb": [
+        170,
+        255,
+        195
+      ],
+      "display_hex": "#C2185B"
+    },
+    {
+      "id": 25,
+      "code": "JP",
+      "source_rgb": [
+        255,
+        250,
+        200
+      ],
+      "display_hex": "#F9A825"
+    }
+  ],
+  "source_palette": "https://github.com/CandleLabAI/PCBSegClassNet/blob/main/src/data/create_mask.py",
+  "graph_w_type_mapping": {
+    "resistor": "R",
+    "capacitor": "C",
+    "electrolytic capacitor": "C",
+    "ic": "IC",
+    "transistor": "Q",
+    "connector": "J",
+    "inductor": "L",
+    "diode": "D",
+    "zener diode": "D",
+    "diode zener array": "D",
+    "resistor network": "RN",
+    "test point": "TP",
+    "button": "BTN",
+    "ferrite bead": "FB",
+    "switch": "SW",
+    "fuse": "F",
+    "led": "LED",
+    "jumper": "JP"
+  },
+  "graph_w_ignored_train_types": {
+    "display": 5,
+    "text": 6657,
+    "component text": 660,
+    "pads": 236,
+    "unknown": 268,
+    "pins": 283,
+    "clock": 29,
+    "buzzer": 1,
+    "potentiometer": 4,
+    "emi filter": 14,
+    "resistor jumper": 4,
+    "battery": 1,
+    "capacitor jumper": 2,
+    "heatsink": 1
+  },
+  "graph_f_instance_rule": "8-connected regions per exact RGB class; touching same-class objects remain merged; disconnected fragments remain separate",
+  "graph_w_mask_rule": "Rectangles are loader placeholders. Mask loss is disabled for Graph-W. No Graph-W mask evaluation is valid.",
+  "graph_w_ambiguities": "ic -> IC, switch -> SW. U versus IC and S versus SW remain distinct; ambiguous capacitor jumper, clock, pins, text, unknown etc are ignored.",
+  "input_images": "Stored pixel values retained. No inferred HLS/RGB reversal.",
+  "external_pcb_images": 0
+}

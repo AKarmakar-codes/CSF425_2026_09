@@ -1,0 +1,28 @@
+# CS F425 Deep Learning - Project Assignment I Dependencies
+# Compatible with Linux x86_64, CUDA 11.8 / 12.1+ environments
+
+# Deep Learning Frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+ultralytics>=8.0.0
+
+# Numerical & Machine Learning
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Computer Vision & Annotation Processing
+pillow>=9.5.0
+opencv-python-headless>=4.7.0.72
+pycocotools>=2.0.6
+
+# Plotting & Reporting
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Progress & Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
+kagglehub>=0.2.0
+

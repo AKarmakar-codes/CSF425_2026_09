@@ -1,0 +1,15 @@
+{
+  "best_trial": "tiny_640",
+  "selection_rule": "Validation S_seg; smaller trainable parameter count breaks a tie. Cohort median is unknown.",
+  "trials": [
+    {
+      "config_name": "tiny_640",
+      "threshold": 0.43,
+      "checkpoint_name": "/content/drive/MyDrive/PCB_Assignment/Results/rtmdet_smoke_5e_seed42/results/segmentation/checkpoints/tiny_640.ckpt",
+      "val_S_seg": 0.354716204446186,
+      "trainable_params": 5622182
+    }
+  ],
+  "test_used_for_selection": false,
+  "mask_scope": "Graph-F only; full assignment mask metric unavailable"
+}

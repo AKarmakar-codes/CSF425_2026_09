@@ -1,0 +1,9 @@
+# Segmentation results
+
+Root segmentation_stats.json contains three checkpoint-backed configurations: medium-640, medium-960, and RTMDet-tiny-640. Medium-model test values come from the supplied `fast_test/metrics.json`; original folders and evaluation notes are retained. Packaging did not rerun quantitative evaluation. Histories include actual classification, box, mask and DFL training losses and validation losses. Plots generated during packaging are direct presentations of saved metrics, not new evaluations.
+
+`historical_local/` and `historical_source_repository/` contain distinct YOLO-s/n reports. The local YOLO-s validation S_seg is 0.355455; the repository version is 0.286543. Their class-wise F1 arrays duplicate AP arrays and recorded losses are constants, so they remain historical evidence pending verification. YOLO-n has reported zero trainable parameters, which is not used as a verified efficiency claim. The mask-RCNN historical validation S_seg does not match the grading formula.
+
+Mask AP/F1 for current checkpoint-backed runs covers Graph-F reconstructed connected-component instances. Graph-W has box-only annotations; rectangle placeholders are not true masks and are not evaluated as mask ground truth. Bounding-box metrics for both domains are retained. Overlays use the assignment's canonical 25-color palette. Deterministic representative images are identified in overlay_manifest.json.
+
+New supporting weights: checkpoints/supporting/trial_1_yolov8s_seg.pt and its embedded training history are now included. They identify a 25-epoch run and therefore do not substantiate the old local 70-epoch score. The source archive's best_segment.ckpt duplicates YOLO-s and was not allowed to overwrite the validation-winning medium-640 file. Primary three trials are unchanged. The nano checkpoint remains absent.

@@ -1,0 +1,15 @@
+{
+  "criterion": "supplied best identity retained; identical to supplied ConvNeXt-Tiny; prior reported validation selection not silently recomputed",
+  "best_trial": "trial_3_convnext_tiny",
+  "best_checkpoint": "checkpoints/best_classification.ckpt",
+  "best_checkpoint_sha256": "5707da8f4785e06943e80514524942f645130df60db8d7efb62cdaba2881bcbf",
+  "source_checkpoint_sha256": "ad1b695e90fad861098e87f15069e2e8dbb48eb10043f4050564b32d514813f2",
+  "checkpoint_available": true,
+  "strict_state_load_verified": true,
+  "finite_25_class_forward_verified": true,
+  "frozen_threshold": 0.5700000000000001,
+  "threshold_source": "actual supplied checkpoint, not the conflicting historical report",
+  "test_used_for_selection": false,
+  "historical_best_trial_score_verified": false,
+  "unresolved": "ConvNeXt checkpoint val_f1 .7799875 and t* .57 differ from historical report F1 .8208817 and t* .48; no quantitative rerun performed"
+}

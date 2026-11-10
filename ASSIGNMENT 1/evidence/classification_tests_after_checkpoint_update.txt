@@ -1,0 +1,20 @@
+test_notebook_script_numerical_agreement (test_classification_repairs.CheckpointTests.test_notebook_script_numerical_agreement) ... ok
+test_three_architectures_and_standalone_round_trip (test_classification_repairs.CheckpointTests.test_three_architectures_and_standalone_round_trip) ... ok
+test_config_propagation (test_classification_repairs.DataConfigTests.test_config_propagation) ... ok
+test_crop_cache_and_stale_detection (test_classification_repairs.DataConfigTests.test_crop_cache_and_stale_detection) ... ok
+test_exclusive_outputs (test_classification_repairs.DataConfigTests.test_exclusive_outputs) ... ok
+test_manifest_consistency_and_cache_identity (test_classification_repairs.DataConfigTests.test_manifest_consistency_and_cache_identity) ... ok
+test_exact_split_and_overlap (test_classification_repairs.MappingTests.test_exact_split_and_overlap) ... ok
+test_official_completeness_and_frozen_validation (test_classification_repairs.MappingTests.test_official_completeness_and_frozen_validation) ... ok
+test_regressions (test_classification_repairs.MappingTests.test_regressions) ... ok
+test_bad_probability_and_label_inputs (test_classification_repairs.MetricsTests.test_bad_probability_and_label_inputs) ... ok
+test_fixed_25_absent_and_score (test_classification_repairs.MetricsTests.test_fixed_25_absent_and_score) ... ok
+test_threshold_rejection_and_rows (test_classification_repairs.MetricsTests.test_threshold_rejection_and_rows) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 13.432s
+
+OK
+Saved visualization to: C:\Users\yashv\Desktop\Report Final\_checkpoint_update\CSF425_2026_G09\tmp\tmpzi_ee1rj\board.png
+Saved visualization to: C:\Users\yashv\Desktop\Report Final\_checkpoint_update\CSF425_2026_G09\tmp\tmptp8nckyn\board.png
+Saved visualization to: C:\Users\yashv\Desktop\Report Final\_checkpoint_update\CSF425_2026_G09\tmp\tmpn5xxu2et\board.png

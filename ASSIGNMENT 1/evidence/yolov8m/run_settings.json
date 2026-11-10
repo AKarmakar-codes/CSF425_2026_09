@@ -1,0 +1,9 @@
+{
+  "epochs": 60,
+  "batch": 2,
+  "accumulation": 4,
+  "seed": 42,
+  "source_digest": "25a038494450e1c59b7653daaacf79e68030724cfd624c03ca521936707ea9b0",
+  "tile": 1024,
+  "overlap": 256
+}

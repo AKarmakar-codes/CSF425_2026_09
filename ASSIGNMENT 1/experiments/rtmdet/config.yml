@@ -1,0 +1,37 @@
+scope: instance_segmentation
+architecture: RTMDet-Ins-tiny
+backbone: CSPNeXt-P5
+neck: CSPNeXtPAFPN
+head: RTMDetInsSepBNHead
+num_classes: 25
+python: '3.10'
+torch: '2.1.2+cu121'
+torchvision: '0.16.2+cu121'
+mmcv: '2.1.0'
+mmengine: '0.10.7'
+mmdet: '3.3.0'
+numpy: '1.26.4'
+seed: 42
+epochs_per_trial: 60
+batch_size: 2
+gradient_accumulation: 4
+optimizer: AdamW
+learning_rate: 0.0002
+weight_decay: 0.05
+tile_size: 1024
+tile_overlap: 256
+validation_fraction_by_board_group: 0.20
+validation_preserve_train_class_support: true
+extra_pcb_images: 0
+mask_loss_graph_f_only: true
+mask_f1_definition: same-class one-to-one greedy instance matching at mask IoU >= 0.50; micro F1
+trials:
+  - name: tiny_640
+    input_size: 640
+    frozen_stages: -1
+  - name: tiny_960
+    input_size: 960
+    frozen_stages: -1
+  - name: tiny_960_frozen2
+    input_size: 960
+    frozen_stages: 2

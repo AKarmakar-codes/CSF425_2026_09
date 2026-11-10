@@ -1,0 +1,103 @@
+# CS F425 Deep Learning - Project Assignment I Configuration
+project:
+  name: "CSF425_2026_G09"
+  group_id: "G09"
+  course: "CS F425 - Deep Learning"
+  academic_year: "2026-27"
+
+random_seed: 42
+
+paths:
+  data_dir: "data"
+  data_mapping: "data_mapping.json"
+  checkpoints_dir: "checkpoints"
+  results_dir: "results"
+  classification_results: "results/classification"
+  segmentation_results: "results/segmentation"
+  best_classification_ckpt: "checkpoints/best_classification.ckpt"
+  best_segmentation_ckpt: "checkpoints/best_segment.ckpt"
+  classification_stats: "classification_stats.json"
+  segmentation_stats: "segmentation_stats.json"
+
+taxonomy:
+  num_classes: 25
+  classes:
+    1: "Resistor (R)"
+    2: "Capacitor (C)"
+    3: "Integrated Circuit (U)"
+    4: "Discrete Transistor (Q)"
+    5: "Connector (J)"
+    6: "Inductor (L)"
+    7: "Resistor Coil (RA)"
+    8: "Diode (D)"
+    9: "Resistor Network (RN)"
+    10: "Test Point (TP)"
+    11: "Integrated Circuit (IC)"
+    12: "Plug (P)"
+    13: "Thyristor (CR)"
+    14: "Motor (M)"
+    15: "Button (BTN)"
+    16: "Ferrite Bead (FB)"
+    17: "CRA"
+    18: "Switch (SW)"
+    19: "Transformer (T)"
+    20: "Fuse (F)"
+    21: "Vacuum Tube (V)"
+    22: "Light Emitting Diode (LED)"
+    23: "Switch (S)"
+    24: "QA"
+    25: "Jumper Link (JP)"
+
+classification:
+  trials:
+    trial_1_efficientnet_b0:
+      backbone: "efficientnet_b0"
+      pretrained: true
+      img_size: 224
+      batch_size: 64
+      epochs: 40
+      learning_rate: 0.0003
+      weight_decay: 0.01
+      loss: "focal" # focal or weighted_ce
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+      imbalance: combined # sampler_only, weighted_loss_only, combined, none
+      num_workers: 0
+      dropout_rate: 0.3
+    trial_2_mobilenet_v3_large:
+      backbone: "mobilenet_v3_large"
+      pretrained: true
+      img_size: 224
+      batch_size: 64
+      epochs: 40
+      learning_rate: 0.0003
+      weight_decay: 0.01
+      loss: "focal"
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+      imbalance: combined # sampler_only, weighted_loss_only, combined, none
+      num_workers: 0
+      dropout_rate: 0.3
+    trial_3_convnext_tiny:
+      backbone: "convnext_tiny"
+      pretrained: true
+      img_size: 224
+      batch_size: 32
+      epochs: 30
+      learning_rate: 0.0001
+      weight_decay: 0.05
+      loss: "focal"
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+      imbalance: combined # sampler_only, weighted_loss_only, combined, none
+      num_workers: 0
+      dropout_rate: 0.3
+
+segmentation:
+  config: configs/segmentation_yolov8m.yml
+  selected_trial: yolov8m_640_aug
+  selected_checkpoint: checkpoints/best_segment.ckpt
+  selection_status: provisional_missing_weights_and_legacy_verification

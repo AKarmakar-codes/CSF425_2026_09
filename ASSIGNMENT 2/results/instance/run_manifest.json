@@ -1,0 +1,37 @@
+{
+  "task": "instance",
+  "tested_boards": [
+    {
+      "board_id": "sample",
+      "image_dimensions": [
+        560,
+        701
+      ],
+      "instance_count": 0
+    }
+  ],
+  "model_sha256": "9741dd92be035081a2c2943566ae4c7f5b657645f6c1cf5072ad3ca533e04e36",
+  "params_inference": 18498398,
+  "threshold": 0.25,
+  "command": [
+    "/home/agnibh/Desktop/vscode/ML/CSF425_2026_G09/ASSIGNMENT 2/inference_instance.py",
+    "--checkpoint",
+    "/home/agnibh/Desktop/vscode/ML/CSF425_2026_G09/ASSIGNMENT 2/checkpoints/best_instance.ckpt",
+    "--images",
+    "ASSIGNMENT 2/data/sample.png",
+    "--out",
+    "ASSIGNMENT 2/results/instance",
+    "--device",
+    "cpu",
+    "--gradcam"
+  ],
+  "device": "cpu",
+  "python": "3.11.15",
+  "torch": "2.11.0+cpu",
+  "torchvision": "0.26.0+cpu",
+  "numpy": "2.4.3",
+  "pillow": "12.1.1",
+  "started_unix": 1794260763.8067262,
+  "finished_unix": 1794260772.2035873,
+  "target_labels_used": false
+}

@@ -1,0 +1,20 @@
+{
+  "artifact_checks_pass": true,
+  "ready_to_zip": true,
+  "ready_to_submit": false,
+  "submission_review_required": [
+    "Reconcile trial_3_convnext_tiny historical metrics with the supplied checkpoint before claiming its old score",
+    "Create or verify the final private repository separately"
+  ],
+  "required_file_failures": [],
+  "verification_limits": [
+    "trial_3_convnext_tiny: supplied checkpoint validation F1 differs from historical quantitative report; see checkpoint_metadata",
+    "Final private CSF425_2026_G09 repository URL not yet supplied",
+    "Classification trained weights loaded and tested; historical ConvNeXt metrics/plots have a checkpoint F1/threshold mismatch and were not silently relabeled as reevaluated.",
+    "Supplied YOLO-s weights are from a 25-epoch run; older 70-epoch s and nano reports are not primary verified results.",
+    "Graph-W true pixel mask ground truth is absent; Graph-F instances are reconstructed from class masks.",
+    "A clean dependency installation and the separate MMDetection inference environment were not verified during packaging."
+  ],
+  "checkpoint_loading_requested": true,
+  "file_count": 248
+}

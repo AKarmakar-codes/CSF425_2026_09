@@ -1,0 +1,92 @@
+[
+  {
+    "file": "results/segmentation/yolov8m_640_aug_test_0116.png",
+    "trial": "yolov8m_640_aug",
+    "image_id": 116,
+    "domain": "Graph-F",
+    "source_image": "GraphPCB/Graph-F/image_dir/pcb_100b_cc_34_image.png",
+    "source_sha256": "c6e426c3237d0c3b8278ce79e5b1f061e2e9a000e448759ceabdae79167682e3",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.39,
+    "display_size": [
+      1800,
+      1042
+    ],
+    "predicted_masks_above_threshold": 277
+  },
+  {
+    "file": "results/segmentation/yolov8m_640_aug_test_0117.png",
+    "trial": "yolov8m_640_aug",
+    "image_id": 117,
+    "domain": "Graph-F",
+    "source_image": "GraphPCB/Graph-F/image_dir/pcb_71f_cc_32_image.png",
+    "source_sha256": "36c02f977d2e2afc41d94e0e4d1ad42b412a4947ed373f92fce9cfa555a13c35",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.39,
+    "display_size": [
+      1800,
+      1196
+    ],
+    "predicted_masks_above_threshold": 88
+  },
+  {
+    "file": "results/segmentation/yolov8m_640_aug_test_0200.png",
+    "trial": "yolov8m_640_aug",
+    "image_id": 200,
+    "domain": "Graph-W",
+    "source_image": "GraphPCB/Graph-W/image_dir/MicroZed_Bottom.jpg",
+    "source_sha256": "7d6e12af039cd0cdc45b8b2cc29760ec0527d0bd77290790da421773beba8a78",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.39,
+    "display_size": [
+      1800,
+      1011
+    ],
+    "predicted_masks_above_threshold": 155
+  },
+  {
+    "file": "results/segmentation/yolov8m_960_aug_test_0116.png",
+    "trial": "yolov8m_960_aug",
+    "image_id": 116,
+    "domain": "Graph-F",
+    "source_image": "GraphPCB/Graph-F/image_dir/pcb_100b_cc_34_image.png",
+    "source_sha256": "c6e426c3237d0c3b8278ce79e5b1f061e2e9a000e448759ceabdae79167682e3",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.48,
+    "display_size": [
+      1800,
+      1042
+    ],
+    "predicted_masks_above_threshold": 271
+  },
+  {
+    "file": "results/segmentation/yolov8m_960_aug_test_0117.png",
+    "trial": "yolov8m_960_aug",
+    "image_id": 117,
+    "domain": "Graph-F",
+    "source_image": "GraphPCB/Graph-F/image_dir/pcb_71f_cc_32_image.png",
+    "source_sha256": "36c02f977d2e2afc41d94e0e4d1ad42b412a4947ed373f92fce9cfa555a13c35",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.48,
+    "display_size": [
+      1800,
+      1196
+    ],
+    "predicted_masks_above_threshold": 85
+  },
+  {
+    "file": "results/segmentation/yolov8m_960_aug_test_0200.png",
+    "trial": "yolov8m_960_aug",
+    "image_id": 200,
+    "domain": "Graph-W",
+    "source_image": "GraphPCB/Graph-W/image_dir/MicroZed_Bottom.jpg",
+    "source_sha256": "7d6e12af039cd0cdc45b8b2cc29760ec0527d0bd77290790da421773beba8a78",
+    "selection_rule": "first two official Graph-F test IDs and first Graph-W test ID; no score-based selection",
+    "threshold": 0.48,
+    "display_size": [
+      1800,
+      1011
+    ],
+    "predicted_masks_above_threshold": 173
+  }
+]

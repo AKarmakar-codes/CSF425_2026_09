@@ -1,0 +1,1 @@
+The alternative classification notebook has no executed full-run outputs and is not the source of the historical classification metrics. It is retained only as a reproducible alternative. The authoritative source snapshots are identified in docs/PROVENANCE.md.

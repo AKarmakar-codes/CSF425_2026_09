@@ -1,0 +1,18 @@
+{
+  "scope": "Segmentation exercise only",
+  "classification_implemented": false,
+  "required_trials_complete": false,
+  "all_test_trials_complete": true,
+  "graph_w_true_pixel_masks_available": false,
+  "graph_f_original_instance_ids_available": false,
+  "full_assignment_segmentation_score_available": false,
+  "missing": [
+    "Graph-W true pixel-mask ground truth",
+    "Original Graph-F instance IDs/polygons to resolve touching objects",
+    "Exercise 1 classification model, metrics, plots, checkpoint and inference",
+    "Group ID, private GitHub repo, final combined assignment ZIP and email submission"
+  ],
+  "grading": "Cohort median parameters and competing scores are unknown; no marks or rank are guaranteed.",
+  "no_extra_pcb_images": true,
+  "stat_file": "segmentation_stats.json"
+}

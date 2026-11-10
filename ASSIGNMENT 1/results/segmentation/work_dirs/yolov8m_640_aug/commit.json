@@ -1,0 +1,11 @@
+{
+  "trial": "yolov8m_640_aug",
+  "epoch": 60,
+  "best_ap": 0.21090832381827526,
+  "committed_utc": "2026-10-17T18:52:54.089485+00:00",
+  "published_hashes": {
+    "results/segmentation/work_dirs/yolov8m_640_aug/last.pt": "88ddec5c3726de3c7aa7bc2ebfde4eb572d9b074f47ed867612c095f79a7aa96",
+    "results/segmentation/checkpoints/yolov8m_640_aug.ckpt": "91e12f097f3cc5e0482afa8d8595d4eef121f79c5949c59663de7b4de759bcc9",
+    "results/segmentation/work_dirs/yolov8m_640_aug/best.pt": "91e12f097f3cc5e0482afa8d8595d4eef121f79c5949c59663de7b4de759bcc9"
+  }
+}

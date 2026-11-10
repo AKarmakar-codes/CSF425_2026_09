@@ -1,0 +1,139 @@
+# CS F425 Deep Learning - Project Assignment I Configuration
+project:
+  name: "CSF425_2026_09"
+  group_id: "09"
+  course: "CS F425 - Deep Learning"
+  academic_year: "2026-27"
+  deadline: "2026-10-18 23:00:00"
+
+random_seed: 42
+
+paths:
+  data_dir: "data"
+  data_mapping: "data_mapping.json"
+  checkpoints_dir: "checkpoints"
+  results_dir: "results"
+  classification_results: "results/classification"
+  segmentation_results: "results/segmentation"
+  best_classification_ckpt: "checkpoints/best_classification.ckpt"
+  best_segmentation_ckpt: "checkpoints/best_segment.ckpt"
+  classification_stats: "classification_stats.json"
+  segmentation_stats: "segmentation_stats.json"
+
+taxonomy:
+  num_classes: 25
+  classes:
+    1: "Resistor (R)"
+    2: "Capacitor (C)"
+    3: "Integrated Circuit (U)"
+    4: "Discrete Transistor (Q)"
+    5: "Connector (J)"
+    6: "Inductor (L)"
+    7: "Resistor Coil (RA)"
+    8: "Diode (D)"
+    9: "Resistor Network (RN)"
+    10: "Test Point (TP)"
+    11: "Integrated Circuit (IC)"
+    12: "Plug (P)"
+    13: "Thyristor (CR)"
+    14: "Motor (M)"
+    15: "Button (BTN)"
+    16: "Ferrite Bead (FB)"
+    17: "CRA"
+    18: "Switch (SW)"
+    19: "Transformer (T)"
+    20: "Fuse (F)"
+    21: "Vacuum Tube (V)"
+    22: "Light Emitting Diode (LED)"
+    23: "Switch (S)"
+    24: "QA"
+    25: "Jumper Link (JP)"
+
+classification:
+  trials:
+    trial_1_efficientnet_b0:
+      backbone: "efficientnet_b0"
+      pretrained: true
+      img_size: 224
+      batch_size: 64
+      epochs: 40
+      learning_rate: 0.0003
+      weight_decay: 0.01
+      loss: "focal" # focal or weighted_ce
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+    trial_2_mobilenet_v3_large:
+      backbone: "mobilenet_v3_large"
+      pretrained: true
+      img_size: 224
+      batch_size: 64
+      epochs: 40
+      learning_rate: 0.0003
+      weight_decay: 0.01
+      loss: "focal"
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+    trial_3_convnext_tiny:
+      backbone: "convnext_tiny"
+      pretrained: true
+      img_size: 224
+      batch_size: 32
+      epochs: 15
+      learning_rate: 0.0001
+      weight_decay: 0.05
+      loss: "focal"
+      focal_gamma: 2.0
+      scheduler: "cosine"
+      warmup_epochs: 5
+    trial_4_efficientnet_b2:
+      backbone: "efficientnet_b2"
+      pretrained: true
+      img_size: 224
+      batch_size: 32
+      epochs: 15
+      learning_rate: 0.0002
+      weight_decay: 0.01
+      loss: "class_balanced"
+      class_balanced_beta: 0.999
+      focal_gamma: 2.0
+      scheduler: "cosine"
+
+segmentation:
+  trials:
+    trial_1_yolov8s_seg:
+      framework: "ultralytics_yolo"
+      model_variant: "yolov8s-seg.pt"
+      imgsz: 640
+      batch_size: 8
+      epochs: 70
+      lr0: 0.001
+      lrf: 0.01
+      weight_decay: 0.0005
+    trial_2_yolov8n_seg:
+      framework: "ultralytics_yolo"
+      model_variant: "yolov8n-seg.pt"
+      imgsz: 640
+      batch_size: 16
+      epochs: 70
+      lr0: 0.001
+      lrf: 0.01
+      weight_decay: 0.0005
+    trial_3_maskrcnn_resnet50:
+      framework: "torchvision_maskrcnn"
+      backbone: "resnet50_fpn"
+      imgsz: 800
+      batch_size: 2
+      epochs: 25
+      learning_rate: 0.001
+      weight_decay: 0.0001
+    trial_4_rtmdet_ins_tiny:
+      framework: "openmmlab_mmdet"
+      backbone: "cspnext_tiny"
+      imgsz: 640
+      batch_size: 8
+      epochs: 60
+      learning_rate: 0.001
+      weight_decay: 0.05
+
