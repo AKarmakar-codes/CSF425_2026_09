@@ -1,0 +1,117 @@
+# Assignment II: Execution Plan (Code & Implementation)
+**Course**: CS F425 | **Group**: G09 | **Target**: 60/60 Marks | **Deadline**: 6th Dec 2026
+
+---
+
+## Architecture & Budget Target
+* **Model**: Compact Mask2Former (ResNet-18 + Multi-Scale Pixel Decoder + 6-layer Masked-Attention Transformer Decoder, $Q=100, h=256$).
+* **Parameter Target**: $P_i \le 19.504\text{M}$ (actual model is **18.50M**) to lock in the **maximum $1.10\times$ efficiency bonus** under the $23.6\text{M}$ cap.
+* **Loss**: Hungarian bipartite matching + Cross-Entropy ($\text{weight}_\varnothing=0.1$) + BCE mask + Dice + Laplacian boundary loss ($\mathcal{L}_{\text{boundary}}$).
+
+---
+
+## Step-by-Step Implementation Pipeline
+
+### Step 1: Source Data Preparation (Graph-F + Distilled Graph-W)
+1. **SAM Distillation on Graph-W**:
+   * Run offline SAM (`vit_b`) on the 37 box-only Graph-W boards to convert bounding boxes into sharp instance masks while keeping ground-truth class IDs.
+   ```bash
+   python scripts/offline_teacher_source.py --source data/GraphPCB --out data/distilled_source
+   ```
+2. **Generate $1024 \times 1024$ Tiles with Board-Group Split**:
+   * Split 152 boards (115 Graph-F + 37 Graph-W) deterministically by physical board identity (80% train / 20% val) to prevent view leakage.
+   * Tile boards at $1024 \times 1024$ with $256$-pixel overlap (stride 768). Apply synchronized rotation/flip/scale augmentations on train tiles only.
+   ```bash
+   python src/semantic/prepare_source.py --source data/GraphPCB --out data/prepared_tiles --seed 42 --tile 1024 --overlap 256
+   ```
+
+---
+
+### Step 2: Smoke Check & Parameter Verification
+* Verify model construction, forward pass, Hungarian matching loss, backward pass, and parameter count ($\le 19.504\text{M}$):
+```bash
+python scripts/smoke_check.py
+```
+*Expected: 18,498,398 parameters, status PASS, efficiency multiplier 1.10x.*
+
+---
+
+### Step 3: Train 3-Way Controlled Ablation Suite (GPU)
+Train for 60 epochs using AdamW ($\text{lr}=10^{-4}$), cosine schedule, batch size 8. Run the 3 controlled candidates mandated by Question 1(a):
+* **Candidate 1 (Primary)**: Full Masked-Attention + Boundary Loss ($\lambda_{\text{bnd}}=1.0, h=256, L=6, Q=100$, 18.50M params).
+* **Candidate 2 (Ablation A - Mechanism)**: Unmasked Cross-Attention (`--disable-masked-attention`).
+* **Candidate 3 (Ablation B - Capacity)**: Compact Width-128 Variant (`--hidden-dim 128`, 13.08M params).
+
+```bash
+bash scripts/run_ablation.sh data/prepared_tiles results/ablation 60 cuda:0 true
+```
+*Script automatically ranks candidates on source validation macro-$F_1$ and copies best weights to:*
+* `checkpoints/best_semantic.ckpt`
+* `checkpoints/best_instance.ckpt`
+
+---
+
+### Step 4: Metrics, Threshold Sweeps & Plots
+1. **Source-Only Threshold Sweeps**:
+   * Sweep $\tau \in [0.10, 1.00]$ on source validation. Lock optimal operating threshold ($\tau^* \approx 0.45\text{--}0.50$).
+   * Populate `semantic_stats.json` and `instance_stats.json` with real metrics, losses, and parameter counts.
+2. **Generate 5 Required Plots**:
+   ```bash
+   python scripts/plot_results.py --runs results/ablation/* --out results/plots
+   ```
+   *Outputs:*
+   * `loss_curves.png`: Epoch training/validation losses.
+   * `threshold_sweeps.png`: Precision, Recall, $F_1$ vs. threshold $\tau$.
+   * `class_metrics.png`: Per-class mIoU and Dice scores.
+   * `ablation_tradeoff.png`: Parameter count vs. validation utility ($U_q$).
+   * `asgt1_vs_asgt2.png`: Historical Assignment-I baseline vs. final student model.
+
+---
+
+### Step 5: High-Resolution Zero-Shot DSLR Inference
+1. **Download CVL DSLR Dataset**:
+   * Download and extract Zenodo record 3886553 (8 archives, ~6.2 GB, 748 images of 165 physical boards).
+2. **Execute Standalone Inference**:
+   * $1024 \times 1024$ sliding tiles with stride 768.
+   * **Semantic**: 2D Hann-window cosine probability blending + table background suppression.
+   * **Instance**: Inter-tile spatial Mask-NMS ($IoU > 0.55$) + unique integer IDs.
+   ```bash
+   bash run_semantic.sh <dslr_image.png> results/semantic/ --gradcam
+   bash run_instance.sh <dslr_image.png> results/instance/ --gradcam
+   ```
+3. **Verify Per-Board Outputs in `results/`**:
+   * `<board_id>_rgb.png` (cropped RGB)
+   * `<board_id>_overlay.png` (transparent overlay)
+   * `<board_id>_black_masks.png` (pure-black canvas with class masks)
+   * `<board_id>_gradcam.png` (spatial activation heatmap)
+   * `<board_id>_instances.json` (instance IDs, classes, scores, bboxes)
+   * `class_legend.png` & `run_manifest.json`
+
+---
+
+### Step 6: Grad-CAM Explainability & Failure Analysis
+1. **Differentiable Score Implementation**:
+   * Hook ResNet-18 `backbone.layer4`. Differentiate score: $S_c = \text{logit}_c \times \sum \sigma(\text{mask})$.
+2. **Deliverables**:
+   * Generate mask-conditioned Grad-CAM for **at least 5 predicted instances across at least 3 distinct DSLR boards**.
+   * Document 2 concrete failure cases (e.g., adjacent 0402 passive overlap, test point vs solder pad confusion) in `README.md`.
+
+---
+
+### Step 7: Clean-Room Verification & Packaging
+1. **Standalone Purity Check**:
+   * Run `inference_semantic.py` and `inference_instance.py` in an environment where `src/` is NOT in `PYTHONPATH`. Must run using only installed third-party libraries.
+2. **Section 8 Checklist Validation**:
+   * All 25 classes present in `data_mapping.json`.
+   * Black backgrounds are pure `(0, 0, 0)`.
+   * All required JSON keys present in `semantic_stats.json` and `instance_stats.json`.
+3. **Package Submission Archive**:
+   ```bash
+   zip -r CSF425_2026_G09_Assignment-II.zip \
+     src/ checkpoints/ results/ \
+     inference_semantic.py inference_instance.py \
+     run_semantic.sh run_instance.sh \
+     semantic_stats.json instance_stats.json \
+     data_mapping.json config.yml README.md
+   ```
+   *Email subject:* `[CSF425_2026_G09_Assignment-II]` with single attachment `CSF425_2026_G09_Assignment-II.zip`.

@@ -46,6 +46,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.deps/
 
 # Jupyter / IPython
 .ipynb_checkpoints/
@@ -73,11 +74,13 @@ htmlcov/
 **/data/GraphPCB
 **/data/coco_pcb_640/
 **/data/crops/
+**/data/classification_ready*/
 **/data/prepared*/
 **/data/distilled_source/
 **/pcb_dslr_download/
 **/part_*/
 **/cvl_pcb_dslr_*/
+*.pcb64
 
 # ------------------------------------------------------------------------------
 # 4. Training Runs, Logs & Temporary Files
@@ -108,17 +111,22 @@ Thumbs.db
 *.sublime-workspace
 
 # ------------------------------------------------------------------------------
-# 6. Checkpoint Rules
-# Ignore ad-hoc / intermediate trial weights, but keep official required checkpoints
+# 6. Model checkpoints
+# Keep the two required Assignment-II checkpoints. Ignore other raw weights by
+# default: several Assignment-I checkpoints exceed GitHub's 100 MB file limit.
+# Use Git LFS or a release/artifact store if those large weights must be shared.
 # ------------------------------------------------------------------------------
+*.ckpt
 *.pth
 *.pt
 **/checkpoints/*.tmp
-**/checkpoints/trial_*.ckpt
 
-# Explicitly ensure required assignment checkpoints and keepfiles are preserved
-!**/checkpoints/.gitkeep
-!**/checkpoints/best_semantic.ckpt
-!**/checkpoints/best_instance.ckpt
-!**/checkpoints/best_segment.ckpt
-!**/checkpoints/best_classification.ckpt
+# Explicitly keep required Assignment-II model artifacts and directory marker.
+!ASSIGNMENT 2/checkpoints/.gitkeep
+!ASSIGNMENT 2/checkpoints/best_semantic.ckpt
+!ASSIGNMENT 2/checkpoints/best_instance.ckpt
+
+# Keep Assignment-II planning/status documents stageable even if broad text
+# ignores are added later.
+!ASSIGNMENT 2/plan.txt
+!ASSIGNMENT 2/ASSIGNMENT_STATUS.md
