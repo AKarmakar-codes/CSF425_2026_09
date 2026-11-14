@@ -15,7 +15,8 @@ set -e
 
 TILES_DIR="${TILES_DIR:-data/prepared_tiles}"
 EPOCHS="${EPOCHS:-60}"
-BATCH="${BATCH:-2}"
+BATCH="${BATCH:-4}"
+EFFECTIVE_BATCH="${EFFECTIVE_BATCH:-8}"
 DEVICE="${DEVICE:-auto}"
 NUM_QUERIES="${NUM_QUERIES:-150}"
 LR="${LR:-1e-4}"
@@ -25,11 +26,12 @@ WEIGHT_DECAY="${WEIGHT_DECAY:-0.05}"
 # Parse optional CLI overrides
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --tiles-dir)   TILES_DIR="$2";   shift 2 ;;
-        --epochs)      EPOCHS="$2";      shift 2 ;;
-        --batch-size)  BATCH="$2";       shift 2 ;;
-        --device)      DEVICE="$2";      shift 2 ;;
-        --num-queries) NUM_QUERIES="$2"; shift 2 ;;
+        --tiles-dir)       TILES_DIR="$2";       shift 2 ;;
+        --epochs)          EPOCHS="$2";          shift 2 ;;
+        --batch-size)      BATCH="$2";           shift 2 ;;
+        --effective-batch) EFFECTIVE_BATCH="$2"; shift 2 ;;
+        --device)          DEVICE="$2";          shift 2 ;;
+        --num-queries)     NUM_QUERIES="$2";     shift 2 ;;
         *) echo "Unknown arg: $1"; shift ;;
     esac
 done
@@ -42,17 +44,19 @@ cd "$REPO_ROOT"
 echo "============================================================"
 echo " CSF425 Assignment II — Student Ablation Training"
 echo "============================================================"
-echo " Tiles Dir:   $TILES_DIR"
-echo " Epochs:      $EPOCHS"
-echo " Batch Size:  $BATCH"
-echo " Num Queries: $NUM_QUERIES"
-echo " Device:      $DEVICE"
+echo " Tiles Dir:         $TILES_DIR"
+echo " Epochs:            $EPOCHS"
+echo " Step Batch Size:   $BATCH"
+echo " Effective Batch:   $EFFECTIVE_BATCH"
+echo " Num Queries:       $NUM_QUERIES"
+echo " Device:            $DEVICE"
 echo "============================================================"
 
 COMMON_ARGS=(
     --tiles-dir "$TILES_DIR"
     --epochs    "$EPOCHS"
     --batch-size "$BATCH"
+    --effective-batch-size "$EFFECTIVE_BATCH"
     --device    "$DEVICE"
     --num-queries "$NUM_QUERIES"
     --lr "$LR"

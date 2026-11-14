@@ -280,15 +280,21 @@ def train_one_epoch(
     grad_clip: float = 1.0,
     epoch: int = 0,
     sem_loss_weight: float = 1.0,
+    grad_accum_steps: int = 1,
+    print_freq: int = 100,
 ) -> Dict[str, float]:
     model.train()
     total_losses: Dict[str, float] = {}
     n_batches = 0
+    total_steps = len(loader)
 
-    for batch in loader:
-        images   = batch["images"].to(device, non_blocking=True)
+    optimizer.zero_grad()
+    t_start = time.time()
+
+    for step, batch in enumerate(loader):
+        images    = batch["images"].to(device, non_blocking=True)
         semantics = batch["semantics"].to(device, non_blocking=True)
-        targets  = [
+        targets   = [
             {
                 "labels": t["labels"].to(device),
                 "masks":  t["masks"].to(device),
@@ -296,7 +302,6 @@ def train_one_epoch(
             for t in batch["targets"]
         ]
 
-        optimizer.zero_grad()
         outputs = model(images)   # List[6 dicts]
 
         # Instance losses (Hungarian matching)
@@ -308,16 +313,34 @@ def train_one_epoch(
             final["pred_logits"], final["pred_masks"], semantics
         )
         loss_dict["loss_semantic"] = loss_sem
-        loss_dict["loss_total"] = loss_dict["loss_total"] + sem_loss_weight * loss_sem
+        loss_total = loss_dict["loss_total"] + sem_loss_weight * loss_sem
+        loss_dict["loss_total"] = loss_total
 
-        loss_dict["loss_total"].backward()
-        if grad_clip > 0:
-            nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        optimizer.step()
+        # Scale loss for gradient accumulation
+        (loss_total / grad_accum_steps).backward()
+
+        if (step + 1) % grad_accum_steps == 0 or (step + 1) == total_steps:
+            if grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+            optimizer.step()
+            optimizer.zero_grad()
 
         for k, v in loss_dict.items():
             total_losses[k] = total_losses.get(k, 0.0) + float(v.item())
         n_batches += 1
+
+        if (step + 1) % print_freq == 0 or (step + 1) == total_steps:
+            elapsed = time.time() - t_start
+            print(
+                f"  [Epoch {epoch:2d} | Step {step+1:4d}/{total_steps}] "
+                f"Loss: {loss_total.item():.4f} "
+                f"(cls: {loss_dict['loss_class'].item():.4f}, "
+                f"mask: {loss_dict['loss_mask'].item():.4f}, "
+                f"dice: {loss_dict['loss_dice'].item():.4f}, "
+                f"bnd: {loss_dict['loss_boundary'].item():.4f}, "
+                f"sem: {loss_sem.item():.4f}) | {elapsed:.0f}s",
+                flush=True
+            )
 
     return {k: v / max(1, n_batches) for k, v in total_losses.items()}
 
@@ -334,33 +357,29 @@ def validate(
     score_thresh: float = 0.50,
 ) -> Dict[str, float]:
     model.eval()
-    all_tp = np.zeros(NUM_CLASSES + 1)
-    all_fp = np.zeros(NUM_CLASSES + 1)
-    all_fn = np.zeros(NUM_CLASSES + 1)
+    K = NUM_CLASSES + 1  # 26 classes (0=bg, 1..25 PCB classes)
+    conf = np.zeros((K, K), dtype=np.int64)
 
     for batch in loader:
-        images   = batch["images"].to(device, non_blocking=True)
+        images    = batch["images"].to(device, non_blocking=True)
         semantics = batch["semantics"].to(device, non_blocking=True)
 
         pred_sem = model.predict_semantic(images, score_thresh=score_thresh)  # (B, H, W)
 
-        for b in range(images.shape[0]):
-            gt = semantics[b].cpu().numpy()
-            pr = pred_sem[b].cpu().numpy()
-            valid = gt != IGNORE_ID
-            for c in range(1, NUM_CLASSES + 1):
-                tp = int(((pr == c) & (gt == c) & valid).sum())
-                fp = int(((pr == c) & (gt != c) & valid).sum())
-                fn = int(((pr != c) & (gt == c) & valid).sum())
-                all_tp[c] += tp
-                all_fp[c] += fp
-                all_fn[c] += fn
+        # Fast vectorized confusion matrix accumulation
+        gt_np = semantics.cpu().numpy()
+        pr_np = pred_sem.cpu().numpy()
+        valid = gt_np != IGNORE_ID
+        idx = gt_np[valid] * K + pr_np[valid]
+        conf += np.bincount(idx, minlength=K * K).reshape(K, K)
 
-    # Macro F1 and mIoU (25 classes only)
+    # Macro F1 and mIoU (classes 1..25 only, background 0 excluded per plan)
     f1_per = []
     iou_per = []
     for c in range(1, NUM_CLASSES + 1):
-        tp, fp, fn = all_tp[c], all_fp[c], all_fn[c]
+        tp = conf[c, c]
+        fp = conf[:, c].sum() - tp
+        fn = conf[c, :].sum() - tp
         if (tp + fp + fn) == 0:
             continue
         prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
@@ -392,7 +411,10 @@ def main():
     parser.add_argument("--run",         type=int, default=3, choices=[1, 2, 3],
                         help="Ablation run: 1=Vanilla, 2=Compact(h=128), 3=Full")
     parser.add_argument("--epochs",      type=int, default=60)
-    parser.add_argument("--batch-size",  type=int, default=2)
+    parser.add_argument("--batch-size",  type=int, default=4,
+                        help="Micro batch size per step (default: 4 for 16GB GPU, safe fallback: 2)")
+    parser.add_argument("--effective-batch-size", type=int, default=8,
+                        help="Effective batch size via gradient accumulation (plan: 8)")
     parser.add_argument("--lr",          type=float, default=1e-4,  help="Decoder learning rate (AdamW)")
     parser.add_argument("--backbone-lr", type=float, default=1e-5,  help="Backbone learning rate (AdamW)")
     parser.add_argument("--weight-decay",type=float, default=0.05,  help="AdamW weight decay (plan: 0.05)")
@@ -401,6 +423,7 @@ def main():
     parser.add_argument("--device",      default="auto")
     parser.add_argument("--seed",        type=int, default=42)
     parser.add_argument("--workers",     type=int, default=2)
+    parser.add_argument("--print-freq",  type=int, default=50,      help="Logging frequency in steps")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -415,8 +438,12 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     run_name = {1: "run1_vanilla", 2: "run2_compact", 3: "run3_full"}.get(args.run, f"run{args.run}")
+    grad_accum_steps = max(1, args.effective_batch_size // args.batch_size)
+    effective_bs = args.batch_size * grad_accum_steps
+
     print(f"\n=== [Step 4] Training Ablation {run_name.upper()} on {device} ===")
     print(f"Q={args.num_queries} | LR={args.lr} | backbone_LR={args.backbone_lr} | WD={args.weight_decay}")
+    print(f"Batch Size (per-step): {args.batch_size} | Accumulation Steps: {grad_accum_steps} | Effective Batch Size: {effective_bs}")
 
     # Datasets & Loaders
     train_ds = PCBTileDataset(tiles_dir, split="train", max_instances=args.num_queries)
@@ -445,6 +472,7 @@ def main():
         train_losses = train_one_epoch(
             model, criterion, train_loader, optimizer, device,
             grad_clip=args.grad_clip, epoch=epoch,
+            grad_accum_steps=grad_accum_steps, print_freq=args.print_freq,
         )
         scheduler.step()
 
