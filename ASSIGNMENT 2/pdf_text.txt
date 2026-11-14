@@ -1,0 +1,480 @@
+Birla Institute of Technology and Science, Pilani
+Hyderabad Campus
+Semester I, Academic Year 2026–2027
+CS F425 – Deep Learning
+
+(Evaluative & Take-Home) Project Assignment – II
+Zero-Shot PCB Segmentation: Compact Student Models vs. Teacher Pseudo-Labels
+Instructor In-Charge
+Assignment Release
+Submission Deadline
+
+Total: 60 Marks
+| Course Weightage: 20%
+Prof. Sk Aziz Ali skaziz.ali@hyderabad.bits-pilani.ac.in
+3rd November 2026
+6th December 2026 (No extension!)
+
+MARK DISTRIBUTION: Question 1 – Semantic Segmentation: 24
+Submission & Reproducibility: 6 = 60 marks.
+
++
+
+Question 2 – Instance Segmentation: 30
+
++
+
+1. General Instructions (Continued from Assignment–I)
+• Work only in the pre-assigned group; ONE final solution and ONE submission email per group. Group
+membership remains unchanged.
+• Create/use a PRIVATE (NOT public) GitHub repository named CSF425_2026_XX (where XX is the group ID).
+Maintain src/, scripts/, results/, checkpoints/, README.md, and config.yml (or environment.yml). Clearly
+distinguish Assignment–II files from Assignment–I.
+• Only one member must email the Instructor with subject [CSF425_2026_XX_Assignment-II] and exactly one file
+CSF425_2026_XX_Assignment-II.zip. Use the correct group ID; do not submit multiple versions.
+• GitHub, code, logs, images, and documents must be sufficient for a non-expert to reproduce results. Do not include
+dataset archives, unnecessarily large temporary data, or SSH credentials in the repository/ZIP.
+• The original rule for external source data remains: at most 1.5× the original labeled training-set size without
+data-volume grading decay. Standard on-the-fly augmentation does not count as adding distinct external images.
+The frozen student model must be trained and selected on source-domain data only. Teacher-generated DSLR masks
+are evaluation pseudo-labels, not target training labels for the graded zero-shot track.
+• Maintain proper citations for external data, pretrained weights, adapted source code, and foundational papers. Do
+not manually edit evaluation predictions, hide teacher-label failures, or cherry-pick test images. The final model
+you submit must NOT cross the parameter count of YOLO26-M-seg.
+1.1 HPC / Kaggle access and security
+Each group receives its assigned account and SSH keys. Your private key csisdl_XX must never be shared or
+committed. Run the following on your own machine:
+chmod 600 csisdl_XX
+ssh -X -i ./csisdl_XX csisdl_XX@hpc.bits-hyderabad.ac.in
+
+If the key is already configured in your SSH agent/configuration, the shorter command is:
+ssh -X csisdl_XX@hpc.bits-hyderabad.ac.in
+
+Optional alias in ~/.bashrc (replace the absolute key path):
+alias loginhpc=’ssh -X -i /path/to/csisdl_XX csisdl_XX@hpc.bits-hyderabad.ac.in’
+
+Use only your allocated HPC account and GPU time; store large data in permitted scratch storage. Kaggle Notebooks
+may be used instead, subject to its current GPU availability and quota. Never run large downloads on a login
+node against local cluster policy.
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Page 1
+
+2. Background, Dataset, and the Meaning of Zero-Shot
+Research source. C. Pramerdorfer and M. Kampel, A Dataset for Computer-Vision-Based PCB Analysis, MVA
+2015, pp. 378–381; DOI: 10.1109/MVA.2015.7153209. Dataset DOI: 10.5281/zenodo.3886553.
+Images
+Resolution
+Provided labels
+Not provided
+
+748 DSLR PCB photographs; 165 distinct physical boards; typically 3–5 orientations/images
+per PCB.
+4928 × 3280 pixels, Nikon D4 camera.
+Binary whole-PCB foreground masks; bounding boxes for 9,313 IC appearances; text labels
+for a subset of ICs.
+No official per-component 25-class semantic masks or instance masks are available. Whole-board foreground is not a component annotation.
+
+(a) Original RGB PCB example
+
+(b) Color-coded instance masks on black
+
+Figure 1: Required visualization format (instructor-provided Raspberry Pi example): original RGB beside
+class-colored component masks on a pure-black canvas. This is an illustration, not an original DSLR target image or
+independently verified ground truth. The class-color table below defines the authoritative palette.
+Zero-shot cross-dataset transfer (this assignment): Train, select hyperparameters, and freeze your model using the
+previously available labeled source-domain data (Graph-W/Graph-F training data). Then apply the fixed system directly to
+the new, unseen target domain: the PCB DSLR dataset. No DSLR component labels or DSLR teacher pseudo-labels
+may be used for student weight training, hyperparameter selection, or checkpoint selection in the graded
+zero-shot track. Inference-time resizing/normalization is permitted. The Instructor may score against a frozen YOLO26-L +
+SAM teacher reference (described below). This is unseen-domain zero-shot transfer, not open-vocabulary zero-shot recognition
+or target-domain teacher distillation.
+
+Important scope. Retain the original 25 class IDs, including the two legacy IC entries U and IC, and the
+two switch entries SW and S. Reuse the same operational distinction/mapping/color-coding of 25 components
+documented for Assignment–I. If ambiguous in DSLR images, predict unknown/ignore rather than inventing a new
+class. Background/void has ID 0 and is not a 26th target component class. A target class absent from a particular
+PCB image need not be predicted.
+2.1 Official Zenodo download procedure
+Download from https://zenodo.org/records/3886553. The record provides eight separate ZIP archives,
+cvl_pcb_dslr_1.zip through cvl_pcb_dslr_8.zip, totaling about 6.2 GB compressed. Select each Download
+link, or use a terminal on an approved storage/compute node:
+mkdir -p pcb_dslr_download && cd pcb_dslr_download
+for i in $(seq 1 8); do
+curl -L --fail --retry 5 -C - \
+-o "cvl_pcb_dslr_${i}.zip" \
+"https://zenodo.org/records/3886553/files/cvl_pcb_dslr_${i}.zip?download=1"
+done
+for f in cvl_pcb_dslr_*.zip; do unzip -t "$f" >/dev/null || exit 1; done
+for i in $(seq 1 8); do
+mkdir -p "part_${i}"
+unzip -q "cvl_pcb_dslr_${i}.zip" -d "part_${i}"
+done
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Page 2
+
+The official research API/example code is available at https://github.com/cpra/mva15 (its Python API targets
+Python 2; students may use their own loader). Verify MD5 checksums listed on Zenodo, retain the source archive
+names, inspect extracted folders before reorganizing, document your final path layout, and cite the dataset. Split by
+physical PCB identity, not image filename: other viewpoints of the same board must not create train/validation or
+benchmark leakage. Do not use the DSLR IC boxes or PCB masks for training/model selection in the graded zero-shot
+setting; those annotations are reserved for permitted evaluation/proxy checks.
+
+3. Pseudo-Ground-Truth Protocol and Model Budget
+Goal. A single, frozen YOLO26-L-seg + Segment Anything Model (SAM) pipeline will produce geometry-aware
+pseudo-instance masks for evaluating compact student models. Treat these as reference pseudo-labels, not
+human ground truth. The same instructor-controlled teacher, thresholds, class mapping, mask resolution and
+evaluation images must be used for every group.
+T1. 25-class detection. The YOLO26-L segmentation/detection head must first be adapted using only the 25-class
+source data from Assignment–I (or paired with the same frozen 25-class source-trained classifier). Off-the-shelf
+COCO-pretrained YOLO26 cannot automatically name all 25 specialized PCB classes. Retain each proposal’s
+class ID, bounding box and confidence.
+T2. SAM geometry refinement. Feed each retained component box (and, if justified, prompt points) to frozen
+SAM. Extract the corresponding high-resolution binary mask. SAM supplies geometry, not a reliable PCB
+class ID; inherit class identity only from the 25-class detector/classifier.
+T3. Fixed annotation quality-control. Remove duplicate proposals with documented same-class mask-NMS,
+discard obvious PCB-background artifacts using the provided whole-board mask, resolve overlap consistently,
+preserve small resistor/capacitor instances and record uncertain regions as ignore=255. Never force a lowconfidence guess into a 25-class label.
+T4. Versioned scoring reference. Use class_id, instance_id, bbox, score, and encoded mask per detected
+component; unlabeled pixels use background 0 or ignored 255.
+Permitted student use: Students may run YOLO26-L + SAM to illustrate or diagnose pseudo-masks on a separate,
+designated public visualization subset and may use this teacher on source-domain training data. However, a student’s
+self-generated DSLR reference labels are not accepted as that student’s grading ground truth. Teacher predictions
+on the Instructor’s held-out DSLR evaluation set are reserved for scoring; no target-domain teacher-student fine-tuning or
+threshold tuning is allowed for the graded zero-shot submission. Target pseudo-label fine-tuning, if investigated, must be
+reported in a separate non-graded pseudo-supervised adaptation experiment.
+
+Inference constraint. Your segmentation pipeline (i.e., backbone, class and mask heads, any decoder, and any other
+learned auxiliary modules) must satisfy total parameters
+Pi ≤ Pmax = P (YOLO26m-seg) ≈ 23.6 × 106 parameters.
+The approximate 23.6M value is the published fused-inference YOLO26-M-seg count (YOLO26-L-seg is approximately
+28.0M). The Instructor’s pinned reference checkpoint and same export/fusion convention determine the exact ceiling.
+Count all weights needed at inference across the full model, not merely trainable weights, excluding only the detached
+offline teacher. Ensembles, SAM calls, or hidden classifiers during student inference also count and cannot be used to
+circumvent the cap.
+Expected geometry-aware mask:
+• Individual small passives remain separated.
+• Need not be exact and accurate to the illustrated
+geometry, but as close as possible.
+• Large chips and connectors have coherent interiors.
+• All non-component pixels remain black.
+• Identical-class instances share a class color but have
+distinct IDs.
+
+Figure 2: Expected geometry-aware instance segmentation of PCB components on a black background.
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Page 3
+
+4. Question 1 – Zero-Shot Semantic Segmentation [24 Marks]
+Problem. Build a deep neural network that predicts a single semantic class label for each PCB image pixel:
+background/void 0, or one of the same 25 component classes. You must reuse and improve your Assignment–I
+training pipeline. The final trained model must be frozen before processing target DSLR images. A shared trained
+backbone, decoder, and experimental runs may be used for both questions.
+(a) Method (required): Implement or adapt the backbone → multi-scale pixel decoder → masked-attention Transformer decoder pipeline of Mask2Former. Re-engineer at least one substantive internal mechanism (e.g.,
+multi-scale fusion, masked-attention refinement, boundary-aware objective, number/selection of mask queries,
+compact backbone, class imbalance strategy). State what changed in code and why. Merely changing the classifier’s
+class count is not sufficient.
+(b) Zero-shot source training: Train on permitted labeled source data only; preserve the same 25-ID mapping.
+Predict all 25 channels even though some target-board classes may be absent. Document unknown/void handling
+and threshold decisions based only on source validation.
+(c) Required comparisons: (i) best applicable Assignment–I model (ported where necessary); (ii) your improved
+new model. Use at least one controlled ablation and report total parameters, trainable parameters, inference time,
+memory, losses, and source-domain validation results.
+(d) Explainability: Apply Grad-CAM to a differentiable class/mask score using a named spatial backbone/pixeldecoder feature layer. Save heatmaps on DSLR images; explain what regions drive component predictions and
+examine at least two errors/failures. Gradient maps from segmentation scores must not be confused with attention
+matrices.
+(e) Outputs: Full-board semantic map, RGB overlay, pure-black canvas, prediction/confidence statistics, Grad-CAM,
+source/target qualitative comparison, complete inference-parameter count and teacher-reference diagnostic score
+on any designated public subset. Submit best_semantic.ckpt and executable standalone inference.
+Q1 assessment item
+Blinded semantic agreement with frozen, quality-audited DSLR teacher pseudo-labels
+New Model, methodology and source-to-target justification
+Controlled comparison, ablation, parameter/time efficiency and error analysis
+Grad-CAM correctness and required semantic visualizations
+TOTAL (Question 1)
+
+Marks
+12
+5
+4
+3
+24
+
+5. Question 2 – Zero-Shot Instance Segmentation [30 Marks]
+Problem. Extend the same system to predict a set of distinct components with a 25-class label, a confidence score, and
+a separate binary mask for every instance. A semantic map, bounding boxes alone, or a generic whole-PCB
+mask do not meet this question’s requirements.
+(a) Ablations: Compare the Assignment–I segmentation baseline and your final model under the same source-only
+training and frozen DSLR inference protocol. Show whether your model is affected or performs better on smallcomponent segmentation, boundaries, cost, or false positives. You may reuse the three Q1 comparison runs when
+the shared model supports both tasks.
+(b) Required imagery: For each evaluation sample, save (i) original board image, (ii) RGB overlay, (iii) colored
+non-overlapping instance masks on black background, with visible class colors, unique integer instance IDs, and
+(iv) a summary listing per-class counts/confidence. Do not hallucinate masks for classes that are not present.
+(c) Grad-CAM: For at least five predicted instances over at least three DSLR boards, produce mask-conditioned
+Grad-CAM (or a rigorous segmentation-target equivalent); specify target mask/query, score function, hooked
+spatial layer, and at least two analysis observations.
+ps
+ps
+(d) Evidence: On reference-scored images, report pseudo-reference instance F1 , AP50
+and mAP50:95
+; distinguish
+them explicitly from metrics on human-verified masks. Evaluate class-aware, one-to-one mask matches at IoU
+≥ 0.5. Provide class-wise counts, precision, recall and threshold curves. Save best_instance.ckpt.
+Q2 assessment item
+Blinded instance-mask F1 and AP against fixed, audited teacher pseudo-labels
+Your deep neural model re-engineering, matching, boundary/small-object strategies
+Ablations, source-domain quantitative analysis, efficiency and error diagnosis
+Grad-CAM, black-background mask renders, IDs and reproducible outputs
+TOTAL (Question 2)
+
+Marks
+16
+6
+4
+4
+30
+
+6. Evaluation and Relative Grading Using a Frozen Teacher
+Reference benchmark. Since the original DSLR dataset supplies only PCB foreground masks and IC boxes, the
+Instructor’s frozen YOLO26-L + SAM pseudo masks serve as a common reference for relative comparison. This
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Page 4
+
+is more reproducible than permitting each group to score itself against its own generated masks. It does not measure
+true 25-class accuracy unless independently checked. The Instructor should manually inspect a small stratified set
+(e.g., 20–30 ROIs across different physical PCBs), fix or mark unreliable labels ignore, and use the same audited
+images for every group. Report the audit outcome separately as a reliability check. Do not credit unverified regions as
+perfect predictions.
+Pixel-level semantic score. On teacher-supported, non-ignored components, calculate per-class precision Pk , recall
+Rk and F1,k = 2Pk Rk /(Pk + Rk ). Define macro F1 over supported classes, excluding absent/unlabeled classes, and
+class-macro mIoU ps . The superscript ps means pseudo-reference, not human ground truth. Background pixels must
+contribute to false positives when your trained model hallucinates PCB components.
+Instance-level score. At different confidence thresholds τ (0.1, 0.2, ..., 1.0 range) selected from source-only validation,
+perform maximum-IoU one-to-one matching of predicted masks to pseudo-reference instances within the same class; a
+TP requires mask-IoU ≥ 0.50. Unmatched predictions and pseudo-reference instances count as FP and FN. Define
+ps
+F1,inst
+=
+
+2T P
+2T P + F P + F N
+
+(0 ≤ F1 ≤ 1);
+
+F1 = 1 ⇐⇒ perfect agreement under this matching rule.
+
+ps
+Compute AP50
+using scored/ranked predictions (do not confuse AP with a threshold-specific F1), and optionally
+ps
+mAP50:95 . A score greater than 1 is mathematically impossible. Also report mask Dice/IoU for successfully matched
+instances to expose overly coarse shapes.
+
+Task quality indices (the primary goal is to approach F1 = 1):
+ps
+C1,i = 0.75 F1,sem,i
++ 0.25 mIoUips ,
+ps
+ps
+C2,i = 0.75 F1,inst,i
++ 0.25 AP50,i
+.
+
+Both scores lie in [0, 1]. To reward accurate and compact models, let Pi be the deployed inference parameters, Pmax
+the pinned YOLO26-M-seg ceiling, and ri the size of externally supplemented labeled source-domain data relative to
+the original source training size. Define
+!
+r
+
+
+Pmax
+1.5
+Ei = clip
+, 1, 1.10 , Ai = min 1,
+, Uq,i = Cq,i Ei Ai .
+Pi
+ri
+For Pi > Pmax , the final student model is ineligible for benchmark marks; its teacher does not count against the
+budget only if used strictly offline, never in student inference. Within the parameter ceiling, the benchmark marks for
+question q are
+
+
+Uq,i
+benchmark
+Mq,i
+= Bq Cq,i Ai 0.70 + 0.30
+, B1 = 12, B2 = 16,
+maxj∈V Uq,j
+where V is the set of parameter-compliant, valid group submissions and the relative term is defined as zero if all
+group utilities are zero. The remaining Q1: 12, Q2: 14, and submission: 6 marks follow the question rubrics and
+checklist. The multiplicative factor ensures that a weak cohort cannot receive high performance marks merely by
+ranking first; the relative term rewards quality and compactness among groups. Smaller models receive up to a 10%
+utility advantage, never compensation for clearly inaccurate segmentation.
+Important grading interpretation: A high F1ps means your final neural model reproduces YoLoV26-generated masks,
+including any mistakes. It must label scores as pseudo-reference agreement, inspect false positives and omissions on the audited
+ROIs, and reserve human-GT accuracy terminology for separately verified masks. Whole-PCB masks and published IC boxes
+remain optional auxiliary checks, not substitutes for class-aware component GT.
+
+Note: No DSLR pseudo-mask training is permitted in the zero-shot track. Reuse Assignment–I weights, pre-processing,
+source-domain evaluation and existing inference scripts. The aim is comparable working hours despite the doubled
+formal marks.
+
+7. Required Files, Naming, and Reproducibility Contract
+Artifact
+Complete source code
+
+Best checkpoints
+Standalone inference
+
+Required evidence
+Source-only training, Mask2Former architecture changes, matching/loss,
+evaluation, plotting, Grad-CAM. Cite external libraries and modifications.
+Both runnable frozen checkpoints; no manual test-time changes.
+One independent Python file per task: model construction, forward,
+pre/post-processing, rendering and Grad-CAM inside; imports only
+installed third-party packages.
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Exact name/path
+src/semantic/;
+src/instance/
+best_semantic.ckpt;
+best_instance.ckpt
+inference_semantic.py;
+inference_instance.py
+
+Page 5
+
+Artifact
+Shell launchers
+
+Target images
+
+Plots
+
+Experiment JSON
+
+Class mapping
+
+Documentation
+
+Required evidence
+One-command reproduction using provided sample input, checkpoint,
+target output dir, and optional –gradcam; no import from training-time
+src/ code.
+Original DSLR RGB; transparent overlay; pure-black canvas with colored class masks; instance outlines/IDs; Grad-CAM heatmaps; corresponding legend. Include the comparison to a released teacher mask
+when available.
+Source epoch losses; P/R/F1 versus thresholds [0,1] on source labels and
+any released pseudo-reference samples; mIoU/Dice, AP, Grad-CAM and
+ablation plots. Never report hidden teacher scores as student-computed.
+Consistent keys:
+run_id, task, seed, train_loss, val_loss,
+val_metrics, params_total, params_inference, params_trainable,
+runtime, data_source, threshold, checkpoint, teacher_version; report pseudo_metrics only for public diagnostic data.
+Canonical 25 class IDs/colors, U-vs-IC and SW-vs-S handling, background 0, ignore 255, dataset-to-class mapping; versioned pseudoreference schema.
+Non-expert guide to download/checksum, environment, source train/val,
+exact inference commands, parameter-count audit, teacher/zero-shot
+separation, Grad-CAM and evaluation caveats.
+
+Exact name/path
+run_semantic.sh;
+run_instance.sh
+results/semantic/;
+results/instance/
+
+results/plots/
+
+semantic_stats.json;
+instance_stats.json
+
+data_mapping.json
+
+README.md; config.yml
+
+Required naming for each board <board_id>:
+<board_id>_rgb.png
+<board_id>_overlay.png
+<board_id>_black_masks.png
+<board_id>_gradcam.png
+Additionally save <board_id>_instances.json in Question 2. Preserve the common palette. Include the file
+run_manifest.json listing all tested board IDs, image dimensions, model hash, source-only threshold, command line,
+software versions, and execution timestamps.
+
+8. Submission & Organization – 6 Marks (All-or-Nothing)
+All 6 marks are awarded only when every mandatory item below is correct; otherwise the submission/organization
+component is 0/6. The question-specific marks are unaffected, subject to scientific validity and reproducibility.
+□ Correct group ownership and expected folders.
+□ Exactly one email from one group member; use exactly these identifiers:
+[CSF425_2026_XX_Assignment-II] (subject)
+CSF425_2026_XX_Assignment-II.zip (ZIP file).
+
+□ Both checkpoints and both shell/Python standalone inference pairs run from a fresh documented environment.
+□ Required black-background semantic and instance-mask figures, instance IDs, class legends, Grad-CAM outputs,
+and inference parameter-count report exist with exact naming.
+□ Valid semantic_stats.json, instance_stats.json, full ablation statistics, 25-class mapping, parameter compliance, and no falsely claimed human-GT DSLR metrics.
+□ README fully reproduces download, source training, inference, plots and model scoring; complete citations; no
+leaked credentials, unlicensed redistribution or hidden target-label tuning.
+
+9. References and Required Reading
+1. Pramerdorfer, C., and Kampel, M. (2015). A Dataset for Computer-Vision-Based PCB Analysis. MVA, 378–381. https:
+//doi.org/10.1109/MVA.2015.7153209. Attached paper is the primary dataset reference.
+2. PCB DSLR Dataset (Zenodo v1, 2020). https://zenodo.org/records/3886553. Eight archives and official archive MD5
+values; non-commercial research use.
+3. Dataset code and access API: https://github.com/cpra/mva15.
+4. Cheng, B. et al. (2022). Masked-Attention Mask Transformer for Universal Image Segmentation. CVPR, 1290–1299.
+https://doi.org/10.1109/CVPR52688.2022.00135.
+5. Mask2Former reference implementation: https://github.com/facebookresearch/Mask2Former. Code reuse requires attribution and a documented architectural ablation.
+6. Ultralytics (YOLO26) official instance-segmentation reference and published YOLO26-M / YOLO26-L parameter counts:
+https://docs.ultralytics.com/tasks/segment/. Baseline weights are COCO-pretrained; 25-class adaptation is required.
+7. Kirillov, A. et al. (2023), Segment Anything. ICCV. https://github.com/facebookresearch/segment-anything. SAM
+refines masks from prompts; it does not automatically assign the specialized PCB class taxonomy.
+
+CS F425 Deep Learning
+
+|
+
+Project Assignment – II
+
+|
+
+Page 6
+
+
