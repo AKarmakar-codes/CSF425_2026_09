@@ -16,25 +16,42 @@ pip install opencv-python-headless pillow scipy matplotlib tqdm
 python3 -c "import torch; print('PyTorch CUDA available:', torch.cuda.is_available(), '| Device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
 
 # 3. Locate Source GraphPCB Dataset
-# On Kaggle, dataset is typically mounted at /kaggle/input/graphpcb/GraphPCB
 SOURCE_DIR=""
-POSSIBLE_PATHS=(
-    "/kaggle/input/graphpcb/GraphPCB"
-    "/kaggle/input/graphpcb"
-    "data/GraphPCB"
-    "../data/GraphPCB"
-)
 
-for p in "${POSSIBLE_PATHS[@]}"; do
-    if [ -d "$p/Graph-W" ] && [ -d "$p/Graph-F" ]; then
-        SOURCE_DIR="$p"
-        break
-    fi
-done
+# Auto-discover GraphPCB dataset directory dynamically across /kaggle/input
+if [ -d "/kaggle/input" ]; then
+    for cand in $(find /kaggle/input -maxdepth 4 -type d -name "Graph-W" 2>/dev/null); do
+        parent="$(dirname "$cand")"
+        if [ -d "$parent/Graph-F" ]; then
+            SOURCE_DIR="$parent"
+            break
+        fi
+    done
+fi
+
+# Fallback check across common specific paths
+if [ -z "$SOURCE_DIR" ]; then
+    POSSIBLE_PATHS=(
+        "/kaggle/input/the-graphpcb-dataset/GraphPCB"
+        "/kaggle/input/the-graphpcb-dataset"
+        "/kaggle/input/graphpcb/GraphPCB"
+        "/kaggle/input/graphpcb"
+        "data/GraphPCB"
+        "../data/GraphPCB"
+        "../../data/GraphPCB"
+    )
+    for p in "${POSSIBLE_PATHS[@]}"; do
+        if [ -d "$p/Graph-W" ] && [ -d "$p/Graph-F" ]; then
+            SOURCE_DIR="$p"
+            break
+        fi
+    done
+fi
 
 if [ -z "$SOURCE_DIR" ]; then
     echo "[Error] Could not locate GraphPCB dataset (containing Graph-W and Graph-F)."
-    echo "Please ensure the GraphPCB Kaggle dataset (irislan/graphpcb) is attached to the notebook."
+    echo "Found the following contents in /kaggle/input:"
+    ls -la /kaggle/input 2>/dev/null || echo "No /kaggle/input found."
     exit 1
 fi
 echo "Using GraphPCB dataset from: $SOURCE_DIR"
