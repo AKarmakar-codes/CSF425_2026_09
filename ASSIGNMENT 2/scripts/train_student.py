@@ -500,8 +500,15 @@ def main():
     best_utility = 0.0
     best_ckpt    = out_dir / f"best_{run_name}.ckpt"
     latest_ckpt  = out_dir / f"latest_{run_name}.ckpt"
+    history_path = out_dir / f"{run_name}_history.json"
     history      = []
     start_epoch  = 1
+
+    if args.resume == "auto":
+        if latest_ckpt.is_file():
+            args.resume = str(latest_ckpt)
+        elif best_ckpt.is_file():
+            args.resume = str(best_ckpt)
 
     if args.resume and os.path.isfile(args.resume):
         print(f"Loading checkpoint to resume: {args.resume}")
@@ -512,6 +519,19 @@ def main():
         start_epoch = checkpoint.get("epoch", 0) + 1
         best_utility = checkpoint.get("best_utility_C1", 0.0)
         print(f"Resuming at epoch {start_epoch} (previous best utility C1: {best_utility:.4f})")
+
+        # Fast forward scheduler to match resumed epoch
+        for _ in range(start_epoch - 1):
+            scheduler.step()
+
+        # Load existing history if available
+        if history_path.is_file():
+            try:
+                history = json.loads(history_path.read_text())
+                history = [h for h in history if h.get("epoch", 0) < start_epoch]
+                print(f"Retained {len(history)} previous epochs in history log.")
+            except Exception:
+                history = []
 
     for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
