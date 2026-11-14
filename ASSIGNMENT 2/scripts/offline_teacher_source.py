@@ -196,8 +196,11 @@ def predict_boxes_batched(
 
     h, w = rgb.shape[:2]
     all_masks: List[np.ndarray] = []
+    total_batches = (len(boxes) + batch_size - 1) // batch_size
 
-    for i in range(0, len(boxes), batch_size):
+    for b_num, i in enumerate(range(0, len(boxes), batch_size), 1):
+        if total_batches > 3:
+            print(f" [SAM {b_num}/{total_batches}]", end="", flush=True)
         chunk = boxes[i : i + batch_size]
         boxes_tensor = torch.as_tensor(chunk, dtype=torch.float, device=device)
         transformed_boxes = predictor.transform.apply_boxes_torch(boxes_tensor, (h, w))
@@ -294,7 +297,9 @@ def process_graph_w_board(
     if sam_predictor is not None:
         try:
             t0 = time.time()
+            print(f" ({len(raw_candidates)} boxes: SAM encoding...", end="", flush=True)
             sam_predictor.set_image(rgb)
+            print(f" done {time.time()-t0:.1f}s, decoding...", end="", flush=True)
             masks = predict_boxes_batched(sam_predictor, rgb, boxes, batch_size=batch_size, device=device)
             t_sam = time.time() - t0
         except Exception as e:

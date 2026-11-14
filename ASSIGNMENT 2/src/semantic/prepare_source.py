@@ -497,13 +497,13 @@ def main():
                 })
                 saved_tile_count += 1
 
-            print(f"[{b_idx}/{len(board_list)}] {b['domain']}:{stem} -> {saved_tile_count} tiles")
+            print(f"[{b_idx}/{len(board_list)}] {b['domain']}:{stem} ({rgb.shape[1]}x{rgb.shape[0]}) -> {saved_tile_count} tiles", flush=True)
 
     # Export split JSON files
     for split_name in ["train", "val"]:
         json_path = out_dir / f"{split_name}.json"
         json_path.write_text(json.dumps(tile_records[split_name], indent=2))
-        print(f"Wrote {len(tile_records[split_name])} tiles to {json_path}")
+        print(f"Wrote {len(tile_records[split_name])} tiles to {json_path}", flush=True)
 
     # Export global manifest
     total_train_boards = len(train_boards)
