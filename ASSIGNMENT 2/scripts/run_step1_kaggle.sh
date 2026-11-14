@@ -18,15 +18,32 @@ python3 -c "import torch; print('PyTorch CUDA available:', torch.cuda.is_availab
 # 3. Locate Source GraphPCB Dataset
 SOURCE_DIR=""
 
-# Auto-discover GraphPCB dataset directory dynamically across /kaggle/input
+echo "Searching for GraphPCB (Graph-W and Graph-F) in /kaggle/input..."
 if [ -d "/kaggle/input" ]; then
-    for cand in $(find /kaggle/input -maxdepth 4 -type d -name "Graph-W" 2>/dev/null); do
+    # Search entire /kaggle/input tree without depth restriction (case-insensitive)
+    for cand in $(find /kaggle/input -type d -iname "*graph-w*" 2>/dev/null); do
         parent="$(dirname "$cand")"
-        if [ -d "$parent/Graph-F" ]; then
+        if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ]; then
             SOURCE_DIR="$parent"
             break
         fi
     done
+
+    # If not found as extracted directory, check for zip archives (e.g. GraphPCB.zip)
+    if [ -z "$SOURCE_DIR" ]; then
+        for z in $(find /kaggle/input -type f -iname "*graph*.zip" -o -iname "*pcb*.zip" 2>/dev/null); do
+            echo "Found dataset archive: $z. Extracting to /kaggle/working/data/GraphPCB..."
+            mkdir -p /kaggle/working/data/GraphPCB
+            unzip -q -o "$z" -d /kaggle/working/data/GraphPCB
+            for cand in $(find /kaggle/working/data/GraphPCB -type d -iname "*graph-w*" 2>/dev/null); do
+                parent="$(dirname "$cand")"
+                if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ]; then
+                    SOURCE_DIR="$parent"
+                    break 2
+                fi
+            done
+        done
+    fi
 fi
 
 # Fallback check across common specific paths
@@ -34,6 +51,8 @@ if [ -z "$SOURCE_DIR" ]; then
     POSSIBLE_PATHS=(
         "/kaggle/input/the-graphpcb-dataset/GraphPCB"
         "/kaggle/input/the-graphpcb-dataset"
+        "/kaggle/input/datasets/the-graphpcb-dataset/GraphPCB"
+        "/kaggle/input/datasets/the-graphpcb-dataset"
         "/kaggle/input/graphpcb/GraphPCB"
         "/kaggle/input/graphpcb"
         "data/GraphPCB"
@@ -50,8 +69,8 @@ fi
 
 if [ -z "$SOURCE_DIR" ]; then
     echo "[Error] Could not locate GraphPCB dataset (containing Graph-W and Graph-F)."
-    echo "Found the following contents in /kaggle/input:"
-    ls -la /kaggle/input 2>/dev/null || echo "No /kaggle/input found."
+    echo "Files found in /kaggle/input:"
+    find /kaggle/input -maxdepth 5 2>/dev/null || ls -la /kaggle/input 2>/dev/null
     exit 1
 fi
 echo "Using GraphPCB dataset from: $SOURCE_DIR"
