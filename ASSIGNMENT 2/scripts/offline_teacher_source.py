@@ -206,12 +206,21 @@ def predict_boxes_batched(
         boxes_tensor = torch.as_tensor(chunk, dtype=torch.float, device=device)
         transformed_boxes = predictor.transform.apply_boxes_torch(boxes_tensor, (h, w))
         with torch.no_grad():
-            chunk_masks, chunk_ious, _ = predictor.predict_torch(
-                point_coords=None,
-                point_labels=None,
-                boxes=transformed_boxes,
-                multimask_output=False,
-            )
+            if device.startswith("cuda"):
+                with torch.cuda.amp.autocast(dtype=torch.float16):
+                    chunk_masks, chunk_ious, _ = predictor.predict_torch(
+                        point_coords=None,
+                        point_labels=None,
+                        boxes=transformed_boxes,
+                        multimask_output=False,
+                    )
+            else:
+                chunk_masks, chunk_ious, _ = predictor.predict_torch(
+                    point_coords=None,
+                    point_labels=None,
+                    boxes=transformed_boxes,
+                    multimask_output=False,
+                )
 
         # Immediately slice each mask on GPU/CPU to its tight bounding box [y1:y2, x1:x2]
         for b_idx, (x1, y1, x2, y2) in enumerate(chunk):
@@ -309,7 +318,12 @@ def process_graph_w_board(
         try:
             t0 = time.time()
             print(f" ({len(raw_candidates)} boxes: SAM encoding...", end="", flush=True)
-            sam_predictor.set_image(rgb)
+            if device.startswith("cuda"):
+                import torch
+                with torch.cuda.amp.autocast(dtype=torch.float16):
+                    sam_predictor.set_image(rgb)
+            else:
+                sam_predictor.set_image(rgb)
             print(f" done {time.time()-t0:.1f}s, decoding...", end="", flush=True)
             masks = predict_boxes_batched(sam_predictor, rgb, boxes, batch_size=batch_size, device=device)
             t_sam = time.time() - t0

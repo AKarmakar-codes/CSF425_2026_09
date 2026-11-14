@@ -117,7 +117,7 @@ python3 -u scripts/offline_teacher_source.py \
     --sam-type vit_h \
     --out "$DISTILLED_DIR" \
     --device auto \
-    --batch-size 32 \
+    --batch-size 64 \
     --mask-nms-thresh 0.50
 
 # 6. Run Step 1 Part 2: Board-Grouped Split & 1024x1024 Tiling
