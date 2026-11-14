@@ -4,3 +4,6 @@ scipy>=1.11
 Pillow>=10
 opencv-python-headless>=4.8
 matplotlib>=3.8
+tqdm>=4.65
+pyyaml>=6.0
+ultralytics>=8.0.0
