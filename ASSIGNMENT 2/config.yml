@@ -12,12 +12,12 @@ model:
   architecture: compact_masked_query_transformer_v2
   backbone: resnet18
   decoder_layers: 6
-  num_queries: 100
+  num_queries: 150
   hidden_dim: 256
   memory_size: 32
   parameter_ceiling: 23600000
   parameter_sweet_spot: 19504000
-  expected_inference_params: 18498398
+  expected_inference_params: 18744410
   efficiency_multiplier_target: 1.1000
 
 data:
@@ -32,7 +32,8 @@ training:
   epochs: 60
   batch_size: 2
   learning_rate: 0.0001
-  weight_decay: 0.0001
+  backbone_learning_rate: 0.00001
+  weight_decay: 0.05
   grad_clip_norm: 1.0
   boundary_loss_weight: 1.0
   validation_threshold_selection: source_validation_only

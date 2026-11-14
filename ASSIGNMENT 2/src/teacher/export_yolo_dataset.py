@@ -84,15 +84,22 @@ def export_split(
 
     exported_count = 0
     for t_idx, tile in enumerate(tqdm(tiles, desc=f"Exporting {tiles_meta_file.stem}")):
-        img_name = tile["image_filename"]
-        mask_name = tile["mask_filename"]
-        src_img = images_in_dir / img_name
-        src_mask = masks_in_dir / mask_name
+        # Support both legacy key names and new schema from prepare_source.py
+        img_name = tile.get("image_filename") or tile.get("image", "")
+        mask_name = tile.get("mask_filename") or tile.get("semantic_mask", "")
+        inst_name = tile.get("instance_map", "")  # instances/split/tile.png
+
+        # Strip directory prefix if present (tile records may store full relative path)
+        img_basename = Path(img_name).name
+        mask_basename = Path(mask_name).name
+
+        src_img = images_in_dir / img_basename
+        src_mask = masks_in_dir / mask_basename
 
         if not src_img.is_file():
             continue
 
-        dst_img = images_out_dir / img_name
+        dst_img = images_out_dir / img_basename
         # Link or copy image
         if not dst_img.exists():
             if link_mode == "symlink":
@@ -104,18 +111,27 @@ def export_split(
                 shutil.copy2(src_img, dst_img)
 
         # Parse objects and extract segmentation polygons
-        label_txt_path = labels_out_dir / (Path(img_name).stem + ".txt")
+        label_txt_path = labels_out_dir / (Path(img_basename).stem + ".txt")
         lines = []
 
         objects = tile.get("objects", [])
         if objects and src_mask.is_file():
-            # Read instance/semantic mask to get exact object polygons
-            # Instance mask has instance IDs, semantic mask has class IDs
+            # Read semantic mask (uint8 class IDs 0..25,255) and instance map (uint16)
             sem = cv2.imread(str(src_mask), cv2.IMREAD_UNCHANGED)
-            inst_mask_path = src_mask.parent.parent / "instances" / src_mask.parent.name / mask_name
+
+            # Resolve instance map: use "instance_map" key relative path if available,
+            # otherwise fall back to the sibling instances/ directory
             inst_map = None
-            if inst_mask_path.is_file():
-                inst_map = cv2.imread(str(inst_mask_path), cv2.IMREAD_UNCHANGED)
+            if inst_name:
+                # inst_name is a relative path like "instances/train/tile.png"
+                inst_abs = tiles_meta_file.parent / inst_name
+                if inst_abs.is_file():
+                    inst_map = cv2.imread(str(inst_abs), cv2.IMREAD_UNCHANGED)
+            if inst_map is None:
+                # Legacy fallback: images_in_dir/../instances/split/<mask_basename>
+                inst_mask_path = src_mask.parent.parent / "instances" / src_mask.parent.name / mask_basename
+                if inst_mask_path.is_file():
+                    inst_map = cv2.imread(str(inst_mask_path), cv2.IMREAD_UNCHANGED)
 
             for obj in objects:
                 cid = obj["category_id"]

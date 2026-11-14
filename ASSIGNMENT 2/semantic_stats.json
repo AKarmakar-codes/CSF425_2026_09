@@ -1,0 +1,92 @@
+{
+  "run_id": "full_masked_q150_h256_l6",
+  "task": "semantic",
+  "seed": 42,
+  "train_loss": 1.942,
+  "val_loss": 2.015,
+  "val_metrics": {
+    "macro_f1": 0.768,
+    "mIoU": 0.631,
+    "utility_C1": 0.7338,
+    "threshold_sweep": [
+      {"threshold": 0.05, "macro_f1": 0.512, "mIoU": 0.384},
+      {"threshold": 0.10, "macro_f1": 0.618, "mIoU": 0.492},
+      {"threshold": 0.15, "macro_f1": 0.694, "mIoU": 0.558},
+      {"threshold": 0.20, "macro_f1": 0.745, "mIoU": 0.608},
+      {"threshold": 0.25, "macro_f1": 0.768, "mIoU": 0.631},
+      {"threshold": 0.30, "macro_f1": 0.762, "mIoU": 0.627},
+      {"threshold": 0.35, "macro_f1": 0.748, "mIoU": 0.612},
+      {"threshold": 0.40, "macro_f1": 0.724, "mIoU": 0.589},
+      {"threshold": 0.50, "macro_f1": 0.665, "mIoU": 0.534}
+    ]
+  },
+  "params_total": 18744410,
+  "params_inference": 18744410,
+  "params_trainable": 18744410,
+  "runtime": 3600.0,
+  "data_source": "official source train, physical-board validation split",
+  "threshold": 0.25,
+  "checkpoint": "checkpoints/best_semantic.ckpt",
+  "teacher_version": "yolo26l_sam_v1",
+  "pseudo_metrics": null,
+  "efficiency_multiplier_E_i": 1.1,
+  "data_volume_decay_A_i": 1.0,
+  "utility_U1": 0.8072,
+  "model_config": {
+    "architecture": "compact_masked_query_transformer_v2",
+    "backbone": "resnet18",
+    "num_classes": 25,
+    "num_queries": 150,
+    "hidden_dim": 256,
+    "decoder_layers": 6,
+    "dim_feedforward": 512,
+    "halo_kernel": 5,
+    "use_halo": true
+  },
+  "ablations": [
+    {
+      "run_id": 0,
+      "run_name": "Run 0: Asgt-I Baseline",
+      "params_inference": 21500000,
+      "use_halo": false,
+      "hidden_dim": 256,
+      "macro_f1": 0.582,
+      "mIoU": 0.441,
+      "utility_C1": 0.5468,
+      "utility_U1": 0.573
+    },
+    {
+      "run_id": 1,
+      "run_name": "Run 1: Vanilla Mask2Former",
+      "params_inference": 18718810,
+      "use_halo": false,
+      "hidden_dim": 256,
+      "macro_f1": 0.674,
+      "mIoU": 0.512,
+      "utility_C1": 0.6335,
+      "utility_U1": 0.6969
+    },
+    {
+      "run_id": 2,
+      "run_name": "Run 2: Compact (h=128)",
+      "params_inference": 14102450,
+      "use_halo": true,
+      "hidden_dim": 128,
+      "macro_f1": 0.651,
+      "mIoU": 0.489,
+      "utility_C1": 0.6105,
+      "utility_U1": 0.6716
+    },
+    {
+      "run_id": 3,
+      "run_name": "Run 3: Full Re-Engineered",
+      "params_inference": 18744410,
+      "use_halo": true,
+      "hidden_dim": 256,
+      "macro_f1": 0.768,
+      "mIoU": 0.631,
+      "utility_C1": 0.7338,
+      "utility_U1": 0.8072
+    }
+  ]
+}

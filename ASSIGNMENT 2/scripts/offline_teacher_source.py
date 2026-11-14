@@ -359,8 +359,8 @@ def process_graph_w_board(
     # Rule T3: Same-class Mask-NMS
     instances = apply_same_class_mask_nms(instances, iou_threshold=mask_nms_threshold)
 
-    # Rule T3: Sort instances by area descending for base painting,
-    # so smaller passives are painted on top (visible over pads)
+    # Rule T3: Sort instances by area descending so large components are painted first
+    # and smaller passives (e.g. 0402 resistors on pads) are painted on top (painter's algorithm).
     instances.sort(key=lambda x: x["area"], reverse=True)
 
     # Render final masks

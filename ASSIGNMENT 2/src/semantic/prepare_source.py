@@ -485,6 +485,8 @@ def main():
                 tile_records[split_name].append({
                     "tile_id": tile_name,
                     "image": img_rel,
+                    "image_filename": f"{tile_name}.jpg",   # YOLO export compat
+                    "mask_filename": f"{tile_name}.png",    # YOLO export compat
                     "semantic_mask": mask_rel,
                     "instance_map": inst_rel,
                     "board_stem": stem,

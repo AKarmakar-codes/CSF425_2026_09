@@ -3,13 +3,14 @@
 Conforms strictly to Assignment II Master Execution Plan (Architecture & Model Budget):
 - Backbone: ResNet-18 (~11.2M params).
 - Pixel Decoder: FPN multi-scale fusion with 1/4-scale mask features (~2.4M params).
-- Transformer Decoder: 6-layer Halo-Dilated Masked Attention with Q=100 queries (~4.9M params).
-- Total Parameters: ~18.50M <= 19.504M (Bonus cap, E_i = 1.10x multiplier).
+- Transformer Decoder: 6-layer Halo-Dilated Masked Attention with Q=150 queries (~4.9M params).
+- Total Parameters: ~18.74M <= 19.504M (Bonus cap, E_i = 1.10x multiplier).
 - Unified Checkpoint: Generates both Q1 semantic masks and Q2 instance masks.
 """
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,7 +27,7 @@ class CompactMask2Former(nn.Module):
     def __init__(
         self,
         num_classes: int = NUM_CLASSES,
-        num_queries: int = 100,
+        num_queries: int = 150,
         hidden_dim: int = 256,
         num_layers: int = 6,
         pretrained_backbone: bool = True,

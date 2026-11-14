@@ -25,7 +25,14 @@ include_paths = [
     Path("config.yml"),
     Path("requirements.txt"),
     Path("plan.txt"),
-    Path("step1_kaggle_notebook.ipynb")
+    Path("step1_kaggle_notebook.ipynb"),
+    Path("inference_semantic.py"),
+    Path("inference_instance.py"),
+    Path("run_semantic.sh"),
+    Path("run_instance.sh"),
+    Path("semantic_stats.json"),
+    Path("instance_stats.json"),
+    Path("README.md"),
 ]
 
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

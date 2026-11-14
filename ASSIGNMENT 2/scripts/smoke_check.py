@@ -33,7 +33,7 @@ def audit_model(
     # 1. Initialize model
     model = CompactMask2Former(
         num_classes=25,
-        num_queries=100,
+        num_queries=150,
         hidden_dim=256,
         num_layers=6,
         pretrained_backbone=False,
@@ -75,8 +75,9 @@ def audit_model(
 
     assert len(outputs) == 6, f"Expected 6 layer outputs, got {len(outputs)}"
     final_layer = outputs[-1]
-    assert final_layer["pred_logits"].shape == (2, 100, 26), f"Unexpected logits shape: {final_layer['pred_logits'].shape}"
-    assert final_layer["pred_masks"].shape == (2, 100, 128, 128), f"Unexpected masks shape: {final_layer['pred_masks'].shape}"
+    Q = model.num_queries
+    assert final_layer["pred_logits"].shape == (2, Q, 26), f"Unexpected logits shape: {final_layer['pred_logits'].shape}"
+    assert final_layer["pred_masks"].shape == (2, Q, 128, 128), f"Unexpected masks shape: {final_layer['pred_masks'].shape}"
     print("Forward pass successful!")
 
     # 4. Smoke Test Semantic Prediction
