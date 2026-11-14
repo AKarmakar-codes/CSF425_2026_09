@@ -191,6 +191,7 @@ def predict_boxes_batched(
     boxes: List[List[int]],
     batch_size: int = 16,
     device: str = "cpu",
+    use_fp16: bool = False,
 ) -> List[np.ndarray]:
     """Predict SAM masks in batches and immediately crop to bbox to prevent 20GB+ RAM OOM."""
     import torch
@@ -206,7 +207,7 @@ def predict_boxes_batched(
         boxes_tensor = torch.as_tensor(chunk, dtype=torch.float, device=device)
         transformed_boxes = predictor.transform.apply_boxes_torch(boxes_tensor, (h, w))
         with torch.no_grad():
-            if device.startswith("cuda"):
+            if use_fp16 and device.startswith("cuda"):
                 with torch.cuda.amp.autocast(dtype=torch.float16):
                     chunk_masks, chunk_ious, _ = predictor.predict_torch(
                         point_coords=None,
@@ -263,6 +264,7 @@ def process_graph_w_board(
     batch_size: int = 16,
     device: str = "cpu",
     mask_nms_threshold: float = 0.50,
+    use_fp16: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Process a single Graph-W board from XML bounding boxes into distilled instance masks."""
     im = cv2.imread(str(img_path))
@@ -318,14 +320,16 @@ def process_graph_w_board(
         try:
             t0 = time.time()
             print(f" ({len(raw_candidates)} boxes: SAM encoding...", end="", flush=True)
-            if device.startswith("cuda"):
+            if use_fp16 and device.startswith("cuda"):
                 import torch
                 with torch.cuda.amp.autocast(dtype=torch.float16):
                     sam_predictor.set_image(rgb)
             else:
                 sam_predictor.set_image(rgb)
             print(f" done {time.time()-t0:.1f}s, decoding...", end="", flush=True)
-            masks = predict_boxes_batched(sam_predictor, rgb, boxes, batch_size=batch_size, device=device)
+            masks = predict_boxes_batched(
+                sam_predictor, rgb, boxes, batch_size=batch_size, device=device, use_fp16=use_fp16
+            )
             t_sam = time.time() - t0
         except Exception as e:
             print(f"[Warning] SAM failed on {stem} ({e}), falling back to morphological prior.")
@@ -644,6 +648,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size for SAM box prompting")
     parser.add_argument("--mask-nms-thresh", type=float, default=0.50, help="Mask-NMS IoU threshold")
     parser.add_argument("--limit", type=int, default=0, help="Optional limit on number of boards (for quick smoke check)")
+    parser.add_argument("--fp16", action="store_true", help="Enable FP16 mixed precision inference (default False, uses exact FP32)")
     args = parser.parse_args()
 
     source_dir = resolve_path(args.source)
@@ -707,6 +712,7 @@ def main():
                 batch_size=args.batch_size,
                 device=device,
                 mask_nms_threshold=args.mask_nms_thresh,
+                use_fp16=args.fp16,
             )
             if res:
                 w_results.append(res)
