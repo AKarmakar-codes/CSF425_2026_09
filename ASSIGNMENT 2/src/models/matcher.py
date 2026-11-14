@@ -75,17 +75,13 @@ class HungarianMatcher(nn.Module):
             # tgt_labels are 1..25; index directly into class probability
             cost_class = -out_prob[:, tgt_labels]   # (Q, M)
 
-            # 2. Mask focal/BCE cost (subsample pixels for efficiency)
+            # 2. Mask focal/BCE cost and Dice cost via einsum (avoids giant QxMxHW VRAM allocation)
             out_mask = pred_masks[b]                # (Q, H, W)
-            H, W = out_mask.shape[-2:]
-            # Flatten and compute BCE on sigmoid
-            out_mask_sig = out_mask.sigmoid().flatten(1)    # (Q, HW)
-            tgt_flat = tgt_masks.flatten(1).float()         # (M, HW)
-            # Binary cross entropy per pair: outer product approximation
-            cost_mask = self._batch_sigmoid_focal_loss(out_mask_sig, tgt_flat)  # (Q, M)
+            out_mask_flat = out_mask.flatten(1)     # (Q, HW) raw mask logits
+            tgt_flat = tgt_masks.flatten(1).float() # (M, HW) binary ground-truth
 
-            # 3. Dice cost
-            cost_dice = self._batch_dice_loss(out_mask_sig, tgt_flat)  # (Q, M)
+            cost_mask = self._batch_sigmoid_focal_loss(out_mask_flat, tgt_flat)  # (Q, M)
+            cost_dice = self._batch_dice_loss(out_mask_flat, tgt_flat)           # (Q, M)
 
             # Combined cost matrix
             C = (
@@ -112,25 +108,37 @@ class HungarianMatcher(nn.Module):
         alpha: float = 0.25,
         gamma: float = 2.0,
     ) -> torch.Tensor:
-        """Pairwise sigmoid focal loss. inputs: (Q, N), targets: (M, N) → (Q, M)."""
-        # Compute for each (q, m) pair via broadcasting
-        inputs = inputs.unsqueeze(1)    # (Q, 1, N)
-        targets = targets.unsqueeze(0)  # (1, M, N)
-        p = inputs.sigmoid()
-        ce = F.binary_cross_entropy_with_logits(inputs, targets.expand_as(inputs), reduction="none")
-        p_t = p * targets + (1 - p) * (1 - targets)
-        alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
-        focal = alpha_t * (1 - p_t) ** gamma * ce
-        return focal.mean(-1)   # (Q, M)
+        """Pairwise sigmoid focal loss via einsum.
+        inputs: (Q, HW) un-sigmoided mask logits
+        targets: (M, HW) binary masks {0, 1}
+        Returns: (Q, M) pairwise focal cost
+        """
+        hw = inputs.shape[1]
+        prob = inputs.sigmoid()
+        focal_pos = ((1.0 - prob) ** gamma) * F.binary_cross_entropy_with_logits(
+            inputs, torch.ones_like(inputs), reduction="none"
+        )
+        focal_neg = (prob ** gamma) * F.binary_cross_entropy_with_logits(
+            inputs, torch.zeros_like(inputs), reduction="none"
+        )
+        if alpha >= 0:
+            focal_pos = focal_pos * alpha
+            focal_neg = focal_neg * (1.0 - alpha)
+
+        cost = (torch.einsum("qc,mc->qm", focal_pos, targets) + torch.einsum("qc,mc->qm", focal_neg, (1.0 - targets))) / hw
+        return cost
 
     @staticmethod
     def _batch_dice_loss(
         inputs: torch.Tensor,
         targets: torch.Tensor,
     ) -> torch.Tensor:
-        """Pairwise dice loss. inputs: (Q, N) sigmoid, targets: (M, N) binary → (Q, M)."""
-        inputs = inputs.unsqueeze(1)    # (Q, 1, N)
-        targets = targets.unsqueeze(0)  # (1, M, N)
-        numerator = 2 * (inputs * targets).sum(-1)
-        denominator = inputs.sum(-1) + targets.sum(-1) + 1e-5
-        return 1.0 - numerator / denominator  # (Q, M)
+        """Pairwise Dice loss via einsum.
+        inputs: (Q, HW) un-sigmoided mask logits
+        targets: (M, HW) binary masks {0, 1}
+        Returns: (Q, M) pairwise Dice cost
+        """
+        prob = inputs.sigmoid()
+        numerator = 2.0 * torch.einsum("qc,mc->qm", prob, targets)
+        denominator = prob.sum(dim=-1)[:, None] + targets.sum(dim=-1)[None, :] + 1e-5
+        return 1.0 - numerator / denominator

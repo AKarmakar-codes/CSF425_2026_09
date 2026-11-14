@@ -179,20 +179,17 @@ def semantic_ce_loss(
     ).sigmoid()                                  # (B, Q, H, W)
 
     # S_c(h,w) = sum_q P_q(c) * M_q(h,w)   →   (B, C, H, W)
-    sem_logits = torch.einsum("bqc,bqhw->bchw", class_probs, masks_up)
+    sem_probs = torch.einsum("bqc,bqhw->bchw", class_probs, masks_up)
 
-    # GT semantic: 0=bg (map to index 0 in sem_logits), 1..25 as 0-indexed 0..24
-    # Build a 26-class map: class 0 = background, classes 1..25 = PCB classes
-    # sem_logits has shape (B, 25, H, W) for classes 1..25 only
-    # Prepend a background channel (zero) for class 0
-    bg_channel = torch.zeros(B, 1, H, W, device=sem_logits.device)
-    sem_logits_full = torch.cat([bg_channel, sem_logits], dim=1)  # (B, 26, H, W)
+    # Background probability: 1 - sum(class_probs * masks_up)
+    bg_prob = (1.0 - sem_probs.sum(dim=1, keepdim=True)).clamp(min=1e-4)
+    sem_probs_full = torch.cat([bg_prob, sem_probs.clamp(min=1e-4)], dim=1)
+    sem_probs_full = sem_probs_full / sem_probs_full.sum(dim=1, keepdim=True)
 
-    # GT: semantic_gt has values 0..25 and 255 (ignore)
     gt = semantic_gt.long()
-    gt[gt == 255] = -100  # PyTorch CE ignores -100 by default
+    gt[gt == 255] = -100
 
-    loss = F.cross_entropy(sem_logits_full, gt, ignore_index=-100, reduction="mean")
+    loss = F.nll_loss(sem_probs_full.log(), gt, ignore_index=-100, reduction="mean")
     return loss
 
 
