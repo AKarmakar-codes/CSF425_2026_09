@@ -19,6 +19,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Enable PyTorch CUDA expandable segments to prevent memory fragmentation on 16GB GPUs
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -277,11 +280,13 @@ def train_one_epoch(
     loader: DataLoader,
     optimizer: optim.Optimizer,
     device: torch.device,
+    scaler: Optional[Any] = None,
+    use_amp: bool = False,
     grad_clip: float = 1.0,
     epoch: int = 0,
     sem_loss_weight: float = 1.0,
     grad_accum_steps: int = 1,
-    print_freq: int = 100,
+    print_freq: int = 50,
 ) -> Dict[str, float]:
     model.train()
     total_losses: Dict[str, float] = {}
@@ -290,6 +295,7 @@ def train_one_epoch(
 
     optimizer.zero_grad()
     t_start = time.time()
+    autocast_device = "cuda" if device.type == "cuda" else "cpu"
 
     for step, batch in enumerate(loader):
         images    = batch["images"].to(device, non_blocking=True)
@@ -302,27 +308,40 @@ def train_one_epoch(
             for t in batch["targets"]
         ]
 
-        outputs = model(images)   # List[6 dicts]
+        if hasattr(torch.amp, "autocast"):
+            autocast_ctx = torch.amp.autocast(autocast_device, enabled=use_amp)
+        else:
+            autocast_ctx = torch.cuda.amp.autocast(enabled=use_amp)
 
-        # Instance losses (Hungarian matching)
-        loss_dict = criterion(outputs, targets)
+        with autocast_ctx:
+            outputs = model(images)   # List[6 dicts]
+            loss_dict = criterion(outputs, targets)
 
-        # Auxiliary semantic CE loss on final layer
-        final = outputs[-1]
-        loss_sem = semantic_ce_loss(
-            final["pred_logits"], final["pred_masks"], semantics
-        )
-        loss_dict["loss_semantic"] = loss_sem
-        loss_total = loss_dict["loss_total"] + sem_loss_weight * loss_sem
-        loss_dict["loss_total"] = loss_total
+            final = outputs[-1]
+            loss_sem = semantic_ce_loss(
+                final["pred_logits"], final["pred_masks"], semantics
+            )
+            loss_dict["loss_semantic"] = loss_sem
+            loss_total = loss_dict["loss_total"] + sem_loss_weight * loss_sem
+            loss_dict["loss_total"] = loss_total
+            loss_scaled = loss_total / grad_accum_steps
 
-        # Scale loss for gradient accumulation
-        (loss_total / grad_accum_steps).backward()
+        if scaler is not None and use_amp:
+            scaler.scale(loss_scaled).backward()
+        else:
+            loss_scaled.backward()
 
         if (step + 1) % grad_accum_steps == 0 or (step + 1) == total_steps:
-            if grad_clip > 0:
-                nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-            optimizer.step()
+            if scaler is not None and use_amp:
+                if grad_clip > 0:
+                    scaler.unscale_(optimizer)
+                    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                if grad_clip > 0:
+                    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                optimizer.step()
             optimizer.zero_grad()
 
         for k, v in loss_dict.items():
@@ -411,8 +430,8 @@ def main():
     parser.add_argument("--run",         type=int, default=3, choices=[1, 2, 3],
                         help="Ablation run: 1=Vanilla, 2=Compact(h=128), 3=Full")
     parser.add_argument("--epochs",      type=int, default=60)
-    parser.add_argument("--batch-size",  type=int, default=4,
-                        help="Micro batch size per step (default: 4 for 16GB GPU, safe fallback: 2)")
+    parser.add_argument("--batch-size",  type=int, default=2,
+                        help="Micro batch size per step (default: 2, safely fits in 16GB GPU)")
     parser.add_argument("--effective-batch-size", type=int, default=8,
                         help="Effective batch size via gradient accumulation (plan: 8)")
     parser.add_argument("--lr",          type=float, default=1e-4,  help="Decoder learning rate (AdamW)")
@@ -420,6 +439,10 @@ def main():
     parser.add_argument("--weight-decay",type=float, default=0.05,  help="AdamW weight decay (plan: 0.05)")
     parser.add_argument("--grad-clip",   type=float, default=1.0)
     parser.add_argument("--num-queries", type=int,   default=150,   help="Number of object queries (plan: Q=150)")
+    parser.add_argument("--amp",         action="store_true", default=True,
+                        help="Use Automatic Mixed Precision (AMP fp16) to conserve VRAM (default: True)")
+    parser.add_argument("--no-amp",      action="store_false", dest="amp",
+                        help="Disable AMP mixed precision")
     parser.add_argument("--device",      default="auto")
     parser.add_argument("--seed",        type=int, default=42)
     parser.add_argument("--workers",     type=int, default=2)
@@ -441,9 +464,16 @@ def main():
     grad_accum_steps = max(1, args.effective_batch_size // args.batch_size)
     effective_bs = args.batch_size * grad_accum_steps
 
+    use_amp = args.amp and device.type == "cuda"
+    if hasattr(torch.amp, "GradScaler"):
+        scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    else:
+        scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+
     print(f"\n=== [Step 4] Training Ablation {run_name.upper()} on {device} ===")
     print(f"Q={args.num_queries} | LR={args.lr} | backbone_LR={args.backbone_lr} | WD={args.weight_decay}")
     print(f"Batch Size (per-step): {args.batch_size} | Accumulation Steps: {grad_accum_steps} | Effective Batch Size: {effective_bs}")
+    print(f"AMP Mixed Precision:   {'ENABLED (fp16)' if use_amp else 'DISABLED'}")
 
     # Datasets & Loaders
     train_ds = PCBTileDataset(tiles_dir, split="train", max_instances=args.num_queries)
@@ -471,6 +501,7 @@ def main():
         t0 = time.time()
         train_losses = train_one_epoch(
             model, criterion, train_loader, optimizer, device,
+            scaler=scaler, use_amp=use_amp,
             grad_clip=args.grad_clip, epoch=epoch,
             grad_accum_steps=grad_accum_steps, print_freq=args.print_freq,
         )
