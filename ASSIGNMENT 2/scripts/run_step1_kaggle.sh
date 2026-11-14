@@ -20,14 +20,14 @@ SOURCE_DIR=""
 
 echo "Searching for GraphPCB (Graph-W and Graph-F) in /kaggle/input..."
 if [ -d "/kaggle/input" ]; then
-    # 1. Search for any directory containing Graph-W or graph-w
-    for cand in $(find /kaggle/input -type d \( -iname "Graph-W" -o -iname "graph-w" \) 2>/dev/null); do
+    # 1. Search for any directory containing Graph-W (case-insensitive)
+    for cand in $(find /kaggle/input -type d \( -iname "*graph-w*" -o -iname "*graph_w*" -o -iname "*wacv*" \) 2>/dev/null); do
         parent="$(dirname "$cand")"
-        if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ]; then
+        if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ] || [ -d "$parent/Graph_F" ] || [ -d "$parent/graph_f" ] || [ -d "$parent/fudan" ]; then
             SOURCE_DIR="$parent"
             break
         fi
-        if [ -d "$cand/Graph-F" ] || [ -d "$cand/graph-f" ]; then
+        if [ -d "$cand/Graph-F" ] || [ -d "$cand/graph-f" ] || [ -d "$cand/Graph_F" ] || [ -d "$cand/graph_f" ]; then
             SOURCE_DIR="$cand"
             break
         fi
@@ -54,10 +54,14 @@ if [ -d "/kaggle/input" ]; then
             else
                 tar -xf "$z" -C /tmp/GraphPCB
             fi
-            for cand in $(find /tmp/GraphPCB -type d \( -iname "Graph-W" -o -iname "graph-w" \) 2>/dev/null); do
+            for cand in $(find /tmp/GraphPCB -type d \( -iname "*graph-w*" -o -iname "*graph_w*" -o -iname "*wacv*" \) 2>/dev/null); do
                 parent="$(dirname "$cand")"
-                if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ]; then
+                if [ -d "$parent/Graph-F" ] || [ -d "$parent/graph-f" ] || [ -d "$parent/Graph_F" ] || [ -d "$parent/graph_f" ] || [ -d "$parent/fudan" ]; then
                     SOURCE_DIR="$parent"
+                    break 2
+                fi
+                if [ -d "$cand/Graph-F" ] || [ -d "$cand/graph-f" ]; then
+                    SOURCE_DIR="$cand"
                     break 2
                 fi
             done

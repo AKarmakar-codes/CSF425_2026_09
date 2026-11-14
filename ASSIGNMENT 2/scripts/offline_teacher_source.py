@@ -588,6 +588,20 @@ def process_graph_f_board(
     }
 
 
+def find_child_dir(base: Path, names: List[str]) -> Optional[Path]:
+    """Find a child directory matching candidate names case-insensitively."""
+    if not base.is_dir():
+        return None
+    for n in names:
+        p = base / n
+        if p.is_dir():
+            return p
+    for child in base.iterdir():
+        if child.is_dir() and child.name.lower() in [n.lower() for n in names]:
+            return child
+    return None
+
+
 def resolve_path(p: str | Path) -> Path:
     """Resolve paths cleanly whether run from repository root or ASSIGNMENT 2 subdirectory."""
     path = Path(p)
@@ -636,12 +650,19 @@ def main():
     sam_predictor = init_sam_predictor(args.sam_ckpt, model_type=args.sam_type, device=device)
 
     # 1. Process Graph-W (37 training boards)
-    graph_w_dir = source_dir / "Graph-W"
+    graph_w_dir = find_child_dir(source_dir, ["Graph-W", "graph-w", "Graph_W", "graph_w", "wacv"])
     w_results: List[Dict[str, Any]] = []
-    if graph_w_dir.is_dir():
-        train_pts = sorted((graph_w_dir / "graphs" / "train").glob("*.pt"))
-        if not train_pts:
-            train_pts = sorted((graph_w_dir / "mask_dir").glob("*.xml"))
+    if graph_w_dir and graph_w_dir.is_dir():
+        w_graph_dir = find_child_dir(graph_w_dir, ["graphs", "graph"])
+        w_img_dir = find_child_dir(graph_w_dir, ["image_dir", "images", "image"]) or graph_w_dir
+        w_mask_dir = find_child_dir(graph_w_dir, ["mask_dir", "masks", "mask"]) or graph_w_dir
+
+        train_pts = []
+        if w_graph_dir:
+            train_sub = find_child_dir(w_graph_dir, ["train"]) or w_graph_dir
+            train_pts = sorted(train_sub.glob("*.pt"))
+        if not train_pts and w_mask_dir:
+            train_pts = sorted(w_mask_dir.glob("*.xml"))
         print(f"\n--- Processing Graph-W ({len(train_pts)} train boards) ---")
         if args.limit > 0:
             train_pts = train_pts[: args.limit]
@@ -649,12 +670,13 @@ def main():
         for pt_idx, pt_file in enumerate(train_pts, 1):
             stem = re.sub(r"^graph_\d+_", "", pt_file.stem).replace("_mask", "")
             img_cands = [
-                graph_w_dir / "image_dir" / f"{stem}.jpg",
-                graph_w_dir / "image_dir" / f"{stem}.png",
-                graph_w_dir / "image_dir" / f"{stem}_image.png",
+                w_img_dir / f"{stem}.jpg",
+                w_img_dir / f"{stem}.png",
+                w_img_dir / f"{stem}_image.png",
+                w_img_dir / f"{stem}_image.jpg",
             ]
             img_path = next((p for p in img_cands if p.is_file()), None)
-            xml_path = graph_w_dir / "mask_dir" / f"{stem}.xml"
+            xml_path = w_mask_dir / f"{stem}.xml"
 
             if not img_path or not xml_path.is_file():
                 print(f"[{pt_idx}/{len(train_pts)}] [Skip] Missing files for Graph-W {stem}")
@@ -679,14 +701,21 @@ def main():
                 print(" Failed.")
 
     # 2. Process Graph-F (115 training boards)
-    graph_f_dir = source_dir / "Graph-F"
+    graph_f_dir = find_child_dir(source_dir, ["Graph-F", "graph-f", "Graph_F", "graph_f", "fudan"])
     f_results: List[Dict[str, Any]] = []
-    if graph_f_dir.is_dir():
-        train_pts = sorted((graph_f_dir / "graphs" / "train").glob("*.pt"))
-        if not train_pts:
-            train_pts = sorted((graph_f_dir / "mask_dir").glob("*_mask.png"))
+    if graph_f_dir and graph_f_dir.is_dir():
+        f_graph_dir = find_child_dir(graph_f_dir, ["graphs", "graph"])
+        f_img_dir = find_child_dir(graph_f_dir, ["image_dir", "images", "image"]) or graph_f_dir
+        f_mask_dir = find_child_dir(graph_f_dir, ["mask_dir", "masks", "mask"]) or graph_f_dir
+
+        train_pts = []
+        if f_graph_dir:
+            train_sub = find_child_dir(f_graph_dir, ["train"]) or f_graph_dir
+            train_pts = sorted(train_sub.glob("*.pt"))
+        if not train_pts and f_mask_dir:
+            train_pts = sorted(f_mask_dir.glob("*_mask.png"))
             if not train_pts:
-                train_pts = sorted((graph_f_dir / "mask_dir").glob("*.png"))
+                train_pts = sorted(f_mask_dir.glob("*.png"))
         print(f"\n--- Processing Graph-F ({len(train_pts)} train boards) ---")
         if args.limit > 0:
             train_pts = train_pts[: args.limit]
@@ -694,14 +723,15 @@ def main():
         for pt_idx, pt_file in enumerate(train_pts, 1):
             stem = re.sub(r"^graph_\d+_", "", pt_file.stem).replace("_mask", "")
             img_cands = [
-                graph_f_dir / "image_dir" / f"{stem}_image.png",
-                graph_f_dir / "image_dir" / f"{stem}.png",
-                graph_f_dir / "image_dir" / f"{stem}.jpg",
+                f_img_dir / f"{stem}_image.png",
+                f_img_dir / f"{stem}.png",
+                f_img_dir / f"{stem}.jpg",
+                f_img_dir / f"{stem}_image.jpg",
             ]
             img_path = next((p for p in img_cands if p.is_file()), None)
             mask_cands = [
-                graph_f_dir / "mask_dir" / f"{stem}_mask.png",
-                graph_f_dir / "mask_dir" / f"{stem}.png",
+                f_mask_dir / f"{stem}_mask.png",
+                f_mask_dir / f"{stem}.png",
             ]
             mask_path = next((p for p in mask_cands if p.is_file()), None)
 
