@@ -41,6 +41,7 @@ CLASSES: Tuple[str, ...] = (
 NUM_CLASSES = 25
 BACKGROUND_ID = 0
 IGNORE_ID = 255
+IGNORE_RGB = (255, 255, 255)
 
 # Official Source RGB Palette (Ground Truth Color Coding in Graph-F)
 SOURCE_RGB: Tuple[Tuple[int, int, int], ...] = (
@@ -177,18 +178,20 @@ def decode_source_mask(rgb_array: np.ndarray) -> np.ndarray:
 
 
 def encode_source_mask(class_id_array: np.ndarray) -> np.ndarray:
-    """Encode a 2D array of class IDs (0..25) into an RGB image using the official SOURCE_RGB palette."""
+    """Encode a 2D array of class IDs (0..25, 255) into an RGB image using the official SOURCE_RGB palette."""
     h, w = class_id_array.shape[:2]
     rgb = np.zeros((h, w, 3), dtype=np.uint8)
     for cid, color in enumerate(SOURCE_RGB, 1):
         rgb[class_id_array == cid] = color
+    rgb[class_id_array == IGNORE_ID] = IGNORE_RGB
     return rgb
 
 
 def encode_display_mask(class_id_array: np.ndarray) -> np.ndarray:
-    """Encode a 2D array of class IDs (0..25) into an RGB image using the high-contrast DISPLAY_RGB palette."""
+    """Encode a 2D array of class IDs (0..25, 255) into an RGB image using the high-contrast DISPLAY_RGB palette."""
     h, w = class_id_array.shape[:2]
     rgb = np.zeros((h, w, 3), dtype=np.uint8)
     for cid, color in enumerate(DISPLAY_RGB, 1):
         rgb[class_id_array == cid] = color
+    rgb[class_id_array == IGNORE_ID] = (128, 128, 128) # Neutral gray for ignore in display
     return rgb

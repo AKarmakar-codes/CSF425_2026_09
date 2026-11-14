@@ -274,9 +274,9 @@ def extract_tiles_from_board(
                 if area < min_component_area:
                     continue
 
-                # Find dominant category_id for this instance
+                # Find dominant category_id for this instance (1..25, ignore 0 background and 255 ignore)
                 cat_ids = crop_sem[imask]
-                cat_ids = cat_ids[cat_ids > 0]
+                cat_ids = cat_ids[(cat_ids > 0) & (cat_ids <= 25)]
                 if len(cat_ids) == 0:
                     continue
                 cid = int(np.bincount(cat_ids).argmax())

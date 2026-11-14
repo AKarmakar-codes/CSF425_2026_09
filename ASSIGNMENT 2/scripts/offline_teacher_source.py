@@ -40,6 +40,7 @@ from src.constants import (
     GLOBAL_LUT,
     BACKGROUND_ID,
     IGNORE_ID,
+    IGNORE_RGB,
     map_graph_w_name,
     decode_source_mask,
     encode_source_mask,
@@ -187,15 +188,15 @@ def apply_same_class_mask_nms(instances: List[Dict[str, Any]], iou_threshold: fl
 def predict_boxes_batched(
     predictor,
     rgb: np.ndarray,
-    boxes: List[List[float]],
+    boxes: List[List[int]],
     batch_size: int = 16,
-    device: str = "cpu"
+    device: str = "cpu",
 ) -> List[np.ndarray]:
-    """Predict SAM masks for bounding boxes in memory-safe batches to prevent OOM."""
+    """Predict SAM masks in batches and immediately crop to bbox to prevent 20GB+ RAM OOM."""
     import torch
 
     h, w = rgb.shape[:2]
-    all_masks: List[np.ndarray] = []
+    cropped_masks: List[np.ndarray] = []
     total_batches = (len(boxes) + batch_size - 1) // batch_size
 
     for b_num, i in enumerate(range(0, len(boxes), batch_size), 1):
@@ -211,16 +212,21 @@ def predict_boxes_batched(
                 boxes=transformed_boxes,
                 multimask_output=False,
             )
-        # Squeeze channel dim: (B, 1, H, W) -> (B, H, W)
-        chunk_bool = (chunk_masks[:, 0] > predictor.model.mask_threshold).cpu().numpy().astype(bool)
-        for b_idx in range(chunk_bool.shape[0]):
-            all_masks.append(chunk_bool[b_idx])
+
+        # Immediately slice each mask on GPU/CPU to its tight bounding box [y1:y2, x1:x2]
+        for b_idx, (x1, y1, x2, y2) in enumerate(chunk):
+            crop_m = (
+                chunk_masks[b_idx, 0, y1:y2, x1:x2] > predictor.model.mask_threshold
+            ).cpu().numpy().astype(bool)
+            if crop_m.sum() < 4:
+                crop_m = np.ones((y2 - y1, x2 - x1), dtype=bool)
+            cropped_masks.append(crop_m)
 
         del boxes_tensor, transformed_boxes, chunk_masks, chunk_ious
         if device.startswith("cuda"):
             torch.cuda.empty_cache()
 
-    return all_masks
+    return cropped_masks
 
 
 def fallback_box_mask(crop_rgb: np.ndarray) -> np.ndarray:
@@ -265,11 +271,10 @@ def process_graph_w_board(
         return None
 
     raw_candidates: List[Dict[str, Any]] = []
+    ignore_boxes: List[List[int]] = []
+
     for obj in tree.getroot().findall("object"):
         raw_name = obj.findtext("name")
-        cid = map_graph_w_name(raw_name)
-        if cid is None or not (1 <= cid <= 25):
-            continue
         box_elem = obj.find("bndbox")
         if box_elem is None:
             continue
@@ -279,6 +284,12 @@ def process_graph_w_board(
             x2 = max(x1 + 1, min(w, int(float(box_elem.findtext("xmax")))))
             y2 = max(y1 + 1, min(h, int(float(box_elem.findtext("ymax")))))
         except (ValueError, TypeError):
+            continue
+
+        cid = map_graph_w_name(raw_name)
+        if cid is None or cid == IGNORE_ID or not (1 <= cid <= 25):
+            # Rule T3: Unmapped/ambiguous source components become ignore=255, NOT background=0
+            ignore_boxes.append([x1, y1, x2, y2])
             continue
 
         raw_candidates.append({
@@ -312,30 +323,18 @@ def process_graph_w_board(
     for idx, cand in enumerate(raw_candidates):
         x1, y1, x2, y2 = cand["bbox"]
         if masks is not None and idx < len(masks):
-            mask = masks[idx]
-            # Restrict mask to bounding box with small 2px margin to ensure spatial fidelity
-            box_crop_mask = np.zeros((h, w), dtype=bool)
-            pad = 2
-            bx1, by1 = max(0, x1 - pad), max(0, y1 - pad)
-            bx2, by2 = min(w, x2 + pad), min(h, y2 + pad)
-            box_crop_mask[by1:by2, bx1:bx2] = True
-            mask = np.logical_and(mask, box_crop_mask)
-            if mask.sum() < 4:
-                # If SAM returned empty, use box crop
-                mask[y1:y2, x1:x2] = True
+            local_mask = masks[idx]
         else:
             crop = rgb[y1:y2, x1:x2]
             local_mask = fallback_box_mask(crop)
-            mask = np.zeros((h, w), dtype=bool)
-            mask[y1:y2, x1:x2] = local_mask
 
         instances.append({
             "category_id": cand["category_id"],
             "class_code": cand["class_code"],
             "raw_name": cand["raw_name"],
             "bbox": [x1, y1, x2, y2],
-            "crop_mask": mask[y1:y2, x1:x2],
-            "area": int(mask[y1:y2, x1:x2].sum()),
+            "crop_mask": local_mask,
+            "area": int(local_mask.sum()),
             "score": 1.0,
         })
 
@@ -349,6 +348,10 @@ def process_graph_w_board(
     # Render final masks
     semantic_rgb = np.zeros((h, w, 3), dtype=np.uint8)
     instance_ids = np.zeros((h, w), dtype=np.uint16)
+
+    # Rule T3: Ambiguous / unmapped source components painted as IGNORE_RGB (255, 255, 255)
+    for ix1, iy1, ix2, iy2 in ignore_boxes:
+        semantic_rgb[iy1:iy2, ix1:ix2] = IGNORE_RGB
 
     # Assign 1-indexed unique instance IDs
     exported_instances = []
@@ -396,15 +399,23 @@ def process_graph_w_board(
     }
 
 
-def split_touching_crop(crop_mask: np.ndarray, min_area: int = 16) -> List[np.ndarray]:
-    """Split touching same-class components inside a local bounding-box crop."""
+def split_touching_crop(
+    crop_mask: np.ndarray,
+    crop_rgb: np.ndarray,
+    min_area: int = 16,
+) -> Tuple[List[np.ndarray], Optional[np.ndarray]]:
+    """Split touching same-class components using distance peaks + RGB edge-guided watershed.
+
+    Returns:
+        (split_masks, boundary_seam_mask)
+    """
     if crop_mask.sum() < min_area:
-        return [crop_mask]
+        return [crop_mask], None
 
     dist = cv2.distanceTransform(crop_mask.astype(np.uint8), cv2.DIST_L2, 5)
     max_val = dist.max()
     if max_val < 3.0:
-        return [crop_mask]
+        return [crop_mask], None
 
     # Find local peaks in distance map
     dist_thresh = 0.45 * max_val
@@ -413,7 +424,7 @@ def split_touching_crop(crop_mask: np.ndarray, min_area: int = 16) -> List[np.nd
 
     num_markers, markers = cv2.connectedComponents(sure_fg)
     if num_markers <= 2:
-        return [crop_mask]
+        return [crop_mask], None
 
     markers = markers.astype(np.int32)
     kernel = np.ones((3, 3), np.uint8)
@@ -422,9 +433,13 @@ def split_touching_crop(crop_mask: np.ndarray, min_area: int = 16) -> List[np.nd
     markers = markers + 1
     markers[unknown == 1] = 0
 
-    dummy = np.zeros((*crop_mask.shape, 3), dtype=np.uint8)
-    dummy[crop_mask] = 255
-    cv2.watershed(dummy, markers)
+    if not crop_rgb.flags["C_CONTIGUOUS"]:
+        crop_rgb = np.ascontiguousarray(crop_rgb)
+
+    cv2.watershed(crop_rgb, markers)
+
+    # markers == -1 are the watershed boundary seams
+    seam_mask = (markers == -1) & crop_mask
 
     split_masks: List[np.ndarray] = []
     for m_id in range(2, num_markers + 1):
@@ -432,7 +447,10 @@ def split_touching_crop(crop_mask: np.ndarray, min_area: int = 16) -> List[np.nd
         if m.sum() >= 4:
             split_masks.append(m)
 
-    return split_masks if split_masks else [crop_mask]
+    if not split_masks:
+        return [crop_mask], None
+
+    return split_masks, seam_mask
 
 
 def process_graph_f_board(
@@ -461,6 +479,7 @@ def process_graph_f_board(
     sem = decode_source_mask(lbl_rgb)
 
     instances: List[Dict[str, Any]] = []
+    seams: List[Tuple[int, int, np.ndarray]] = []
 
     # Process each class present on the board
     present_classes = [c for c in np.unique(sem) if 1 <= c <= 25]
@@ -475,11 +494,14 @@ def process_graph_f_board(
                 continue
 
             crop = (labels[y : y + bh, x : x + bw] == cc_id)
+            crop_rgb = rgb[y : y + bh, x : x + bw]
 
             # Check if blob is a touching multi-component cluster
             aspect_ratio = max(bw, bh) / max(1, min(bw, bh))
             if area > 100 or aspect_ratio > 3.0:
-                sub_crops = split_touching_crop(crop)
+                sub_crops, seam = split_touching_crop(crop, crop_rgb)
+                if seam is not None and seam.any():
+                    seams.append((x, y, seam))
             else:
                 sub_crops = [crop]
 
@@ -512,6 +534,11 @@ def process_graph_f_board(
     semantic_rgb = np.zeros((h, w, 3), dtype=np.uint8)
     instance_ids = np.zeros((h, w), dtype=np.uint16)
 
+    # Rule T3: Original ambiguous/ignore pixels remain IGNORE_RGB
+    orig_ignore = (sem == IGNORE_ID)
+    if orig_ignore.any():
+        semantic_rgb[orig_ignore] = IGNORE_RGB
+
     exported_instances = []
     for inst_id, inst in enumerate(instances, 1):
         x1, y1, x2, y2 = inst["bbox"]
@@ -532,6 +559,11 @@ def process_graph_f_board(
             "area": int(inst["area"]),
             "score": float(inst.get("score", 1.0)),
         })
+
+    # Rule T3: Paint 1px watershed inter-instance split seams as IGNORE_RGB (255, 255, 255)
+    for sx, sy, seam in seams:
+        sh, sw = seam.shape
+        semantic_rgb[sy : sy + sh, sx : sx + sw][seam] = IGNORE_RGB
 
     # Save output artifacts
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -608,12 +640,14 @@ def main():
     w_results: List[Dict[str, Any]] = []
     if graph_w_dir.is_dir():
         train_pts = sorted((graph_w_dir / "graphs" / "train").glob("*.pt"))
+        if not train_pts:
+            train_pts = sorted((graph_w_dir / "mask_dir").glob("*.xml"))
         print(f"\n--- Processing Graph-W ({len(train_pts)} train boards) ---")
         if args.limit > 0:
             train_pts = train_pts[: args.limit]
 
         for pt_idx, pt_file in enumerate(train_pts, 1):
-            stem = re.sub(r"^graph_\d+_", "", pt_file.stem)
+            stem = re.sub(r"^graph_\d+_", "", pt_file.stem).replace("_mask", "")
             img_cands = [
                 graph_w_dir / "image_dir" / f"{stem}.jpg",
                 graph_w_dir / "image_dir" / f"{stem}.png",
@@ -649,12 +683,16 @@ def main():
     f_results: List[Dict[str, Any]] = []
     if graph_f_dir.is_dir():
         train_pts = sorted((graph_f_dir / "graphs" / "train").glob("*.pt"))
+        if not train_pts:
+            train_pts = sorted((graph_f_dir / "mask_dir").glob("*_mask.png"))
+            if not train_pts:
+                train_pts = sorted((graph_f_dir / "mask_dir").glob("*.png"))
         print(f"\n--- Processing Graph-F ({len(train_pts)} train boards) ---")
         if args.limit > 0:
             train_pts = train_pts[: args.limit]
 
         for pt_idx, pt_file in enumerate(train_pts, 1):
-            stem = re.sub(r"^graph_\d+_", "", pt_file.stem)
+            stem = re.sub(r"^graph_\d+_", "", pt_file.stem).replace("_mask", "")
             img_cands = [
                 graph_f_dir / "image_dir" / f"{stem}_image.png",
                 graph_f_dir / "image_dir" / f"{stem}.png",
