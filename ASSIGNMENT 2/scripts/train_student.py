@@ -447,6 +447,7 @@ def main():
     parser.add_argument("--seed",        type=int, default=42)
     parser.add_argument("--workers",     type=int, default=2)
     parser.add_argument("--print-freq",  type=int, default=50,      help="Logging frequency in steps")
+    parser.add_argument("--resume",      type=str, default=None,    help="Path to checkpoint to resume from")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -495,9 +496,21 @@ def main():
 
     best_utility = 0.0
     best_ckpt    = out_dir / f"best_{run_name}.ckpt"
+    latest_ckpt  = out_dir / f"latest_{run_name}.ckpt"
     history      = []
+    start_epoch  = 1
 
-    for epoch in range(1, args.epochs + 1):
+    if args.resume and os.path.isfile(args.resume):
+        print(f"Loading checkpoint to resume: {args.resume}")
+        checkpoint = torch.load(args.resume, map_location=device)
+        model.load_state_dict(checkpoint["state_dict"])
+        if "optimizer_state" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer_state"])
+        start_epoch = checkpoint.get("epoch", 0) + 1
+        best_utility = checkpoint.get("best_utility_C1", 0.0)
+        print(f"Resuming at epoch {start_epoch} (previous best utility C1: {best_utility:.4f})")
+
+    for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
         train_losses = train_one_epoch(
             model, criterion, train_loader, optimizer, device,
@@ -511,19 +524,23 @@ def main():
         elapsed = time.time() - t0
 
         utility = val_metrics["utility_C1"]
+        ckpt_data = {
+            "epoch": epoch,
+            "run_id": args.run,
+            "run_name": run_name,
+            "num_queries": args.num_queries,
+            "params_inference": p_inf,
+            "state_dict": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "val_metrics": val_metrics,
+            "best_utility_C1": max(best_utility, utility),
+        }
+        # Always save latest checkpoint to allow seamless resumption
+        torch.save(ckpt_data, str(latest_ckpt))
+
         if utility > best_utility:
             best_utility = utility
-            torch.save({
-                "epoch": epoch,
-                "run_id": args.run,
-                "run_name": run_name,
-                "num_queries": args.num_queries,
-                "params_inference": p_inf,
-                "state_dict": model.state_dict(),
-                "optimizer_state": optimizer.state_dict(),
-                "val_metrics": val_metrics,
-                "best_utility_C1": best_utility,
-            }, str(best_ckpt))
+            torch.save(ckpt_data, str(best_ckpt))
 
         log_line = {
             "epoch": epoch,
