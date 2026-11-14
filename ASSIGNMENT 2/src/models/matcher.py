@@ -55,11 +55,14 @@ class HungarianMatcher(nn.Module):
             List of (query_indices, gt_indices) tuples, one per batch image.
         """
         B, Q, _ = pred_logits.shape
+        # Cast to float32 to prevent half-precision (fp16) arithmetic overflow in einsum/dot-products
+        pred_logits = pred_logits.float()
+        pred_masks  = pred_masks.float()
         indices = []
 
         for b in range(B):
             tgt_labels = targets[b]["labels"]   # (M,)
-            tgt_masks  = targets[b]["masks"]    # (M, H, W)
+            tgt_masks  = targets[b]["masks"].float()  # (M, H, W)
             M = len(tgt_labels)
 
             if M == 0:
@@ -78,7 +81,7 @@ class HungarianMatcher(nn.Module):
             # 2. Mask focal/BCE cost and Dice cost via einsum (avoids giant QxMxHW VRAM allocation)
             out_mask = pred_masks[b]                # (Q, H, W)
             out_mask_flat = out_mask.flatten(1)     # (Q, HW) raw mask logits
-            tgt_flat = tgt_masks.flatten(1).float() # (M, HW) binary ground-truth
+            tgt_flat = tgt_masks.flatten(1)         # (M, HW) binary ground-truth
 
             cost_mask = self._batch_sigmoid_focal_loss(out_mask_flat, tgt_flat)  # (Q, M)
             cost_dice = self._batch_dice_loss(out_mask_flat, tgt_flat)           # (Q, M)
@@ -89,6 +92,9 @@ class HungarianMatcher(nn.Module):
                 + self.cost_mask * cost_mask
                 + self.cost_dice * cost_dice
             )  # (Q, M)
+
+            # Ensure strictly finite cost matrix for scipy linear_sum_assignment (failsafe against NaN/Inf)
+            C = torch.nan_to_num(C, nan=1e4, posinf=1e4, neginf=-1e4)
 
             # Solve assignment on CPU (scipy)
             C_np = C.cpu().numpy()
@@ -113,6 +119,8 @@ class HungarianMatcher(nn.Module):
         targets: (M, HW) binary masks {0, 1}
         Returns: (Q, M) pairwise focal cost
         """
+        inputs = inputs.float()
+        targets = targets.float()
         hw = inputs.shape[1]
         prob = inputs.sigmoid()
         focal_pos = ((1.0 - prob) ** gamma) * F.binary_cross_entropy_with_logits(
@@ -138,6 +146,8 @@ class HungarianMatcher(nn.Module):
         targets: (M, HW) binary masks {0, 1}
         Returns: (Q, M) pairwise Dice cost
         """
+        inputs = inputs.float()
+        targets = targets.float()
         prob = inputs.sigmoid()
         numerator = 2.0 * torch.einsum("qc,mc->qm", prob, targets)
         denominator = prob.sum(dim=-1)[:, None] + targets.sum(dim=-1)[None, :] + 1e-5

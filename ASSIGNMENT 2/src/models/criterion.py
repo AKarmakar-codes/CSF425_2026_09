@@ -85,8 +85,9 @@ class SetCriterion(nn.Module):
         num_layers = len(outputs)
 
         for layer_idx, layer_out in enumerate(outputs):
-            pred_logits = layer_out["pred_logits"]   # (B, Q, C+1)
-            pred_masks  = layer_out["pred_masks"]    # (B, Q, H, W)
+            # Compute matching and losses in float32 for numerical stability under AMP
+            pred_logits = layer_out["pred_logits"].float()   # (B, Q, C+1)
+            pred_masks  = layer_out["pred_masks"].float()    # (B, Q, H, W)
 
             # 1. Hungarian Matching (stop gradient — matcher is @no_grad)
             indices = self.matcher(pred_logits, pred_masks, targets)
@@ -171,8 +172,8 @@ class SetCriterion(nn.Module):
             zero = torch.tensor(0.0, device=device)
             return zero, zero, zero
 
-        pred_cat = torch.cat(all_pred, dim=0)   # (N_matched, H, W)
-        tgt_cat  = torch.cat(all_tgt,  dim=0)  # (N_matched, H, W)
+        pred_cat = torch.cat(all_pred, dim=0).float()   # (N_matched, H, W)
+        tgt_cat  = torch.cat(all_tgt,  dim=0).float()   # (N_matched, H, W)
 
         # Focal / BCE mask loss
         p = pred_cat.sigmoid()

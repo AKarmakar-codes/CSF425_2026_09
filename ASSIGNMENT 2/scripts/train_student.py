@@ -175,6 +175,9 @@ def semantic_ce_loss(
     H, W = semantic_gt.shape[-2:]
     H4, W4 = pred_masks.shape[-2:]
 
+    pred_logits = pred_logits.float()
+    pred_masks  = pred_masks.float()
+
     probs = F.softmax(pred_logits, dim=-1)       # (B, Q, C+1)
     class_probs = probs[:, :, 1:]                # (B, Q, C)   classes 1..25
     masks_up = F.interpolate(
