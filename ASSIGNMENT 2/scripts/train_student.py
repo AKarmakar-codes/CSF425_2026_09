@@ -532,6 +532,9 @@ def main():
                 print(f"Retained {len(history)} previous epochs in history log.")
             except Exception:
                 history = []
+        elif "history" in checkpoint and checkpoint["history"]:
+            history = [h for h in checkpoint["history"] if h.get("epoch", 0) < start_epoch]
+            print(f"Retained {len(history)} previous epochs from checkpoint metadata.")
 
     for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
@@ -557,6 +560,7 @@ def main():
             "optimizer_state": optimizer.state_dict(),
             "val_metrics": val_metrics,
             "best_utility_C1": max(best_utility, utility),
+            "history": history,
         }
         # Always save latest checkpoint to allow seamless resumption
         torch.save(ckpt_data, str(latest_ckpt))
@@ -571,6 +575,8 @@ def main():
             **{f"val_{k}":   round(v, 6) for k, v in val_metrics.items()},
         }
         history.append(log_line)
+        # Save history after every single epoch so it's never lost if interrupted
+        history_path.write_text(json.dumps(history, indent=2))
 
         print(
             f"[Epoch {epoch:3d}/{args.epochs}] "
