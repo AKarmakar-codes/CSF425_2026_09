@@ -1,0 +1,60 @@
+{
+  "input_files": [
+    {
+      "path": "/home/agnibh/Desktop/vscode/ML/CSF425_2026_09/ASSIGNMENT 2/checkpoints/best_run3_full.ckpt",
+      "sha256": "59d16c86317b0c06834b22823ee3a365ad6fba6d5d0784e7bd5c419731f086d6"
+    },
+    {
+      "path": "/home/agnibh/Desktop/vscode/ML/CSF425_2026_09/ASSIGNMENT 2/checkpoints/run3_full_history.json",
+      "sha256": "0205107b7e1e19ece121c4d5a5018f316d997efa5f869250db0c477e78464042"
+    }
+  ],
+  "runs": {
+    "run3_full": {
+      "epochs_with_records": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48
+      ],
+      "params_inference": 18744410.0,
+      "sources": [
+        "/home/agnibh/Desktop/vscode/ML/CSF425_2026_09/ASSIGNMENT 2/checkpoints/best_run3_full.ckpt",
+        "/home/agnibh/Desktop/vscode/ML/CSF425_2026_09/ASSIGNMENT 2/checkpoints/run3_full_history.json"
+      ]
+    }
+  },
+  "generated_from_measurements": {
+    "loss_curves.png": true,
+    "validation_metrics.png": true,
+    "threshold_sweeps.png": false,
+    "class_metrics.png": false,
+    "ablation_tradeoff.png": false
+  },
+  "input_errors": []
+}

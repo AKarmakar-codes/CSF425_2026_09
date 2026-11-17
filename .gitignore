@@ -4,17 +4,27 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1. Security & Credentials (Mandatory per Section 1.1)
-# Never commit HPC private keys or credentials to Git
+# 1. Security, Credentials & API Keys
+# Never commit HPC private keys, API tokens, or secrets to Git
 # ------------------------------------------------------------------------------
 csisdl_*
 *.pem
 *.key
+*.cer
+*.crt
+*.pfx
+*.p12
 id_rsa*
 id_ed25519*
+id_ecdsa*
+id_dsa*
 .env
 .env.*
+!.env.example
 *.secret
+*.credentials
+kaggle.json
+wandb_api_key.txt
 
 # ------------------------------------------------------------------------------
 # 2. Python Bytecode, Caches & Environments
@@ -60,7 +70,7 @@ venv.bak/
 htmlcov/
 
 # ------------------------------------------------------------------------------
-# 3. Large Datasets & Archives (Do not commit multi-GB archives)
+# 3. Large Datasets, Tiled Data & Archives (Do not commit multi-GB datasets)
 # ------------------------------------------------------------------------------
 *.zip
 *.tar
@@ -69,13 +79,19 @@ htmlcov/
 *.7z
 *.rar
 
-# Raw dataset directories and symlinks
+# Raw and prepared dataset directories
+prepared_tiles/
+**/prepared_tiles/
+**/prepared*/
+prepared_data/
+**/prepared_data/
+tiles/
+**/tiles/
 **/data/GraphPCB/
 **/data/GraphPCB
 **/data/coco_pcb_640/
 **/data/crops/
 **/data/classification_ready*/
-**/data/prepared*/
 **/data/distilled_source/
 **/pcb_dslr_download/
 **/part_*/
@@ -88,12 +104,20 @@ htmlcov/
 runs/
 **/runs/
 wandb/
+work_dirs/
+**/work_dirs/
+lightning_logs/
+**/lightning_logs/
+events.out.tfevents.*
 *.log
+*.log.json
 *.tmp
 *.swp
 *~
 tmp/
 /tmp/
+.cache/
+**/.cache/
 
 # ------------------------------------------------------------------------------
 # 5. OS & Editor Specific
@@ -111,22 +135,29 @@ Thumbs.db
 *.sublime-workspace
 
 # ------------------------------------------------------------------------------
-# 6. Model checkpoints
-# Keep the two required Assignment-II checkpoints. Ignore other raw weights by
-# default: several Assignment-I checkpoints exceed GitHub's 100 MB file limit.
-# Use Git LFS or a release/artifact store if those large weights must be shared.
+# 6. Model Checkpoints & Weights
+# Keep only explicitly required lightweight checkpoints (<100MB).
+# Ignore other raw weights to stay within GitHub's file limit.
 # ------------------------------------------------------------------------------
 *.ckpt
 *.pth
 *.pt
+*.bin
+*.safetensors
+*.onnx
+*.engine
 **/checkpoints/*.tmp
 
-# Explicitly keep required Assignment-II model artifacts and directory marker.
+# Explicitly keep required Assignment-II model artifacts and directory markers
 !ASSIGNMENT 2/checkpoints/.gitkeep
 !ASSIGNMENT 2/checkpoints/best_semantic.ckpt
 !ASSIGNMENT 2/checkpoints/best_instance.ckpt
+!ASSIGNMENT 2/checkpoints/run3_full_history.json
 
-# Keep Assignment-II planning/status documents stageable even if broad text
-# ignores are added later.
+# Explicitly keep Assignment-I checkpoint documentation / markers
+!ASSIGNMENT 1/checkpoints/README.md
+!ASSIGNMENT 1/checkpoints/.gitkeep
+
+# Keep Assignment-II planning/status documents stageable
 !ASSIGNMENT 2/plan.txt
 !ASSIGNMENT 2/ASSIGNMENT_STATUS.md

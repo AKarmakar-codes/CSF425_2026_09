@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+<rect width="100%" height="100%" fill="white"/>
+<text x="600.0" y="120" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="bold">Per-class metrics</text>
+<text x="600.0" y="340.0" text-anchor="middle" font-family="sans-serif" font-size="20">Not plotted from measured data</text>
+<text x="600.0" y="376.0" text-anchor="middle" font-family="sans-serif" font-size="16">No measured per-class records were supplied.</text>
+</svg>
